@@ -1,1 +1,12 @@
 README_PERSO.md
+
+# Python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Empaquetage PyInstaller
+build/
+dist/
+*.spec
