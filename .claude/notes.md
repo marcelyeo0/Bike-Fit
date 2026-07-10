@@ -68,3 +68,63 @@ heures de calcul, dépendance impossible à empaqueter — disproportionné.
 ### Prochaine étape
 Attendre la validation du `README_PERSO.md` par Marcel avant de coder.
 Ensuite : jalon P1.1 (squelette du projet + venv + fenêtre d'accueil vide).
+
+---
+
+## Étape 1 — Module `pose/` (2026-07-10)
+
+### Ce que je fais
+Abstraction `PoseEstimator` (classe abstraite) + `MediaPipeEstimator` +
+`VideoSource` (webcam ou fichier, même interface pour les deux modes).
+
+### Décisions et surprises
+- **MediaPipe 0.10.35 (dernière version) a supprimé l'API `mp.solutions`** —
+  découvert à l'installation. Deux options : passer à l'API Tasks (impose de
+  télécharger un fichier modèle `.task` à part) ou épingler la dernière
+  version qui embarque encore le modèle dans le paquet pip. Choix :
+  **épingler `mediapipe==0.10.21`** — zéro téléchargement au premier
+  lancement chez le vélociste, et un fichier de moins à gérer pour
+  PyInstaller. Effet domino : 0.10.21 exige numpy<2, donc
+  `opencv-python==4.10` (les 5.x exigent numpy≥2). Tout est commenté dans
+  `requirements.txt`. Leçon : figer les versions d'un écosystème ML, sinon
+  le projet casse à la prochaine release.
+- **Ouverture webcam Windows : `cv2.CAP_DSHOW`** au lieu du backend MSMF par
+  défaut, qui met plusieurs secondes à s'ouvrir.
+- **Choix du côté du corps** : en vue de profil, MediaPipe « hallucine » le
+  côté caché. On score la visibilité épaule+hanche+genou+cheville de chaque
+  côté et on ne garde que le meilleur.
+
+## Étape 2 — Module `analysis/` (2026-07-10)
+
+### Ce que je fais
+`geometry.py` (angles par produit scalaire), `filters.py` (lissage EMA),
+`session.py` (détection des points morts du pédalage + agrégation),
+`thresholds.py` (seuils par mode, sourcés), `recommender.py` (règles →
+conseils chiffrés). 29 tests pytest, tous au vert.
+
+### Décisions
+- **Convention d'angle : intérieur** (celui affiché sur image.png, genou
+  134,6°), conversion flexion = 180 − intérieur documentée. Les seuils de la
+  littérature (souvent en flexion) sont convertis une fois pour toutes dans
+  `thresholds.py`.
+- **Lissage : EMA** plutôt que moyenne glissante (latence N/2) ou One-Euro
+  (plus complexe) : mémoire O(1), un paramètre. On passera à One-Euro si
+  l'EMA traîne trop sur les mouvements rapides.
+- **Points morts : hystérésis** sur la trajectoire y de la cheville plutôt
+  que `scipy.find_peaks` (latence de fenêtre + dépendance en plus).
+- **Conversion angle→réglage** : ~3,5 mm de selle par degré de genou,
+  ~8 mm de cintre par degré de tronc (ordres de grandeur, arrondis au
+  multiple de 5 mm — honnêteté sur la précision réelle sans calibration).
+- Le recommender évite les conseils contradictoires : si « monter la selle »
+  est déjà émis via le genou en bas de course, la règle du genou en haut
+  (même remède) est court-circuitée.
+
+### Bug instructif (corrigé)
+Première version du `CycleTracker` : pendant l'amorçage (direction
+inconnue), les deux branches de détection partageaient le même extremum
+candidat — chacune le tirait dans son sens, l'écart au seuil ne se creusait
+jamais, **zéro événement détecté** (les tests sinusoïde l'ont attrapé dès
+que le seuil anti-bruit a été monté à 20 px). Correction : phase d'amorçage
+explicite avec suivi min/max séparés, qui fixe la direction sans émettre le
+premier extremum. Leçon : les états « je ne sais pas encore » méritent une
+branche dédiée, pas un bricolage des branches nominales.
