@@ -48,6 +48,16 @@ def test_console_recoit_une_recommandation(app):
     assert page.console.count() == 1
 
 
+def test_tunnel_page_se_construit(app):
+    from ui.tunnel_page import TunnelPage
+    page = TunnelPage()
+    # Sans vidéo importée : contrôles désactivés, pas d'animation.
+    assert not page._slider.isEnabled()
+    assert not page._launch.isEnabled()
+    assert not page._timer.isActive()
+    page.shutdown()
+
+
 def test_overlay_dessine_sans_crash():
     from ui import overlay
     frame = np.zeros((480, 640, 3), dtype=np.uint8)

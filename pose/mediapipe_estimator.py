@@ -50,14 +50,18 @@ _MIN_VISIBILITY = 0.5
 
 
 class MediaPipeEstimator(PoseEstimator):
-    def __init__(self, with_mask: bool = True, model_complexity: int = 1):
+    def __init__(self, with_mask: bool = True, model_complexity: int = 1,
+                 static_image: bool = False):
         # model_complexity=1 : compromis précision/vitesse (0=rapide, 2=précis).
         # smooth_landmarks : lissage temporel interne de MediaPipe, complété
         # par notre propre EMA dans analysis/filters.py.
+        # static_image=True pour une frame isolée (soufflerie) : détection
+        # complète à chaque image au lieu du suivi vidéo frame à frame.
         self._pose = _mp_pose.Pose(
+            static_image_mode=static_image,
             model_complexity=model_complexity,
             enable_segmentation=with_mask,
-            smooth_landmarks=True,
+            smooth_landmarks=not static_image,
             min_detection_confidence=0.5,
             min_tracking_confidence=0.5,
         )

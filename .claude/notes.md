@@ -128,3 +128,77 @@ que le seuil anti-bruit a été monté à 20 px). Correction : phase d'amorçage
 explicite avec suivi min/max séparés, qui fixe la direction sans émettre le
 premier extremum. Leçon : les états « je ne sais pas encore » méritent une
 branche dédiée, pas un bricolage des branches nominales.
+
+---
+
+## Étape 3 — UI Phase 1 (2026-07-10)
+
+### Ce que je fais
+Application Qt complète : accueil → choix du mode → analyse live
+(vidéo annotée + console + « Terminer l'analyse ») → rapport de session.
+
+### Décisions
+- **QStackedWidget** (pages empilées dans une fenêtre) plutôt que fenêtres
+  multiples : une seule boucle d'événements, pas de fenêtres orphelines,
+  navigation triviale. La « fenêtre de sortie texte séparée » du cahier des
+  charges est un panneau latéral (comme la maquette) — même service, moins
+  de gestion de fenêtres.
+- **FitWorker en QThread** : la boucle caméra+MediaPipe (~30 ms/frame)
+  gèlerait l'UI dans le thread principal. Les signaux Qt font la
+  communication inter-threads sans file d'attente maison. Équivalent C++ :
+  std::thread + queue de messages — la découpe se transposera.
+- **Anti-spam de la console** : la maquette montre 7× le même message ;
+  volontairement non imité. Une reco n'est répétée qu'après 8 s, et
+  seulement aux points morts du cycle (là où les mesures ont un sens).
+- **QImage.copy() obligatoire** dans VideoView : sans copie, Qt pointe vers
+  le buffer NumPy réutilisé à la frame suivante → crash aléatoire (piège
+  classique OpenCV/Qt, documenté dans le code).
+- Le rapport de session est dans `analysis/report.py` (chaîne pure, testée)
+  et pas dans l'UI : réutilisable pour un futur export PDF.
+
+## Étape 4 — Module `windtunnel/` (2026-07-10)
+
+### Ce que je fais
+Silhouette (nettoyage du masque MediaPipe), solveur d'écoulement potentiel
+2D, score de traînée relatif, rendu (iso-lignes + particules + zones
+rouges). 20 tests sur des cas à solution connue.
+
+### Décisions
+- **Fonction de courant ψ + relaxation red-black (SOR)** : les iso-lignes
+  de ψ SONT les lignes de courant — pas de tracé approximatif, la physique
+  donne directement le visuel. Grille ~200 de large : 0,55 s sur une image
+  720p, dans la promesse « < 1 s » du README. Écarté : matplotlib pour les
+  contours (dépendance lourde à empaqueter) — extraction par
+  `cv2.findContours` sur seuils successifs.
+- **Limites assumées et écrites dans les docstrings** : pas de viscosité →
+  pas de vrai sillage ; les « zones de traînée » rouges sont une heuristique
+  (cellules lentes derrière le corps), le score est RELATIF (hauteur +
+  compacité de la silhouette), jamais des watts.
+- **Score de traînée** : 65 % hauteur de silhouette (levier n°1 d'une
+  position aéro, visible de profil) + 35 % compacité. Pas de pénalité
+  d'angle séparée : la hauteur EST déjà le signal postural de profil.
+
+### Bugs/leçons
+- Test « les particules avancent » d'abord écrit sur la moyenne des x :
+  faux — les particules réinjectées à gauche font baisser la moyenne.
+  Réécrit sur des particules loin des bords (toutes doivent avancer).
+  Leçon : tester l'invariant exact, pas un agrégat qui le noie.
+- `cv2.findContours` referme les iso-lignes le long du cadre de l'image →
+  filtrage des tronçons de bord (découpe du contour en runs intérieurs).
+
+## Étape 5 — UI soufflerie (2026-07-10)
+
+### Décisions
+- **Deux emplacements A/B** avec vidéo, curseur de frame et score chacun :
+  l'usage vélociste est comparatif (avant/après réglage). Scrubber la
+  vidéo invalide le calcul du slot (le score correspond toujours à la
+  frame affichée).
+- **model_complexity=2 (heavy) pour la soufflerie** : sur frame statique,
+  le modèle léger échoue là où le heavy réussit (constaté sur image.png).
+  ⚠ Le heavy n'est PAS dans le paquet pip : MediaPipe le télécharge au
+  premier usage (cache dans site-packages). **Conséquence empaquetage :
+  lancer la soufflerie une fois sur la machine de build avant PyInstaller.**
+  L'analyse live garde le modèle 1 (30 fps requis).
+- Animation par QTimer 40 ms dans le thread UI : après le calcul lourd
+  (thread), chaque tick ne coûte qu'une advection de particules + un rendu
+  OpenCV (~5 ms) — pas besoin d'un second thread.

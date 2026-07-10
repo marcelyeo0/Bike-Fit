@@ -70,22 +70,29 @@ def _grid_to_image(points: np.ndarray, flow: FlowField) -> np.ndarray:
 def _draw_streamlines(canvas: np.ndarray, flow: FlowField,
                       n_lines: int = 18) -> None:
     """Iso-niveaux de ψ = lignes de courant, en dégradé bleu→cyan."""
-    img_h, img_w = flow.image_shape
     gh, gw = flow.psi.shape
     psi_min, psi_max = float(flow.psi.min()), float(flow.psi.max())
     levels = np.linspace(psi_min, psi_max, n_lines + 2)[1:-1]
+    margin = 2  # findContours referme les contours le long du cadre :
+    #             on ne dessine que les portions intérieures au domaine.
     for i, level in enumerate(levels):
         above = (flow.psi > level).astype(np.uint8)
         contours, _ = cv2.findContours(above, cv2.RETR_LIST,
-                                       cv2.CHAIN_APPROX_SIMPLE)
+                                       cv2.CHAIN_APPROX_NONE)
         t = i / max(n_lines - 1, 1)
         color = (255, int(140 + 90 * t), int(40 + 120 * t))  # BGR bleu→cyan
         for contour in contours:
-            if len(contour) < 8:
-                continue
-            pts = _grid_to_image(contour[:, 0, :].astype(np.float64), flow)
-            cv2.polylines(canvas, [pts.astype(np.int32)], False, color, 1,
-                          cv2.LINE_AA)
+            pts = contour[:, 0, :].astype(np.float64)
+            inside = ((pts[:, 0] >= margin) & (pts[:, 0] < gw - margin)
+                      & (pts[:, 1] >= margin) & (pts[:, 1] < gh - margin))
+            # Découpe le contour en tronçons intérieurs consécutifs.
+            boundaries = np.flatnonzero(np.diff(inside.astype(int))) + 1
+            for run in np.split(np.arange(len(pts)), boundaries):
+                if run.size < 8 or not inside[run[0]]:
+                    continue
+                seg = _grid_to_image(pts[run], flow)
+                cv2.polylines(canvas, [seg.astype(np.int32)], False, color, 1,
+                              cv2.LINE_AA)
 
 
 def render_tunnel_frame(base_bgr: np.ndarray, flow: FlowField,
