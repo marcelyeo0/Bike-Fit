@@ -4,16 +4,17 @@ feedback.py — Bilan de fin de session de bike fitting.
 À la fin d'une analyse, on compare les angles mesurés aux plages cibles et
 on produit un compte-rendu lisible pour le cycliste :
   - version LOCALE : factuelle, sans réseau, toujours disponible
-  - version IA (optionnelle) : personnalisée, tient compte du commentaire
+  - version IA (Gemini, optionnelle) : personnalisée, tient compte du commentaire
 
-Entrée principale : un objet SessionAngles (déjà alimenté pendant la vidéo)
-et le dict de plages cibles. Utilisation :
+Pré-requis pour la version IA :
+    pip install google-genai python-dotenv
+    .env à la racine avec :  GEMINI_API_KEY=...
 
+Utilisation :
     from src.core.feedback import analyse_session, build_report, get_ai_feedback
     findings = analyse_session(session, ranges)
-    print(build_report(findings))
-    # ou, avec conseil personnalisé :
-    print(get_ai_feedback(findings, comment="mal au dos après une heure"))
+    print(build_report(findings))                       # bilan local
+    print(get_ai_feedback(findings, comment="mal au dos"))   # bilan personnalisé
 """
 
 import os
@@ -23,6 +24,8 @@ from dotenv import load_dotenv
 from src.core.angles import JOINT_ANGLES
 
 load_dotenv()
+
+MODEL_NAME = "gemini-2.5-flash"
 
 
 # Traduction "articulation hors plage" → cause probable côté réglage vélo.
@@ -45,12 +48,8 @@ def analyse_session(session, ranges: dict) -> list:
     Compare chaque angle mesuré à sa plage et renvoie une liste de constats.
 
     Chaque constat est un dict :
-        {
-          "joint": "knee",
-          "value": 155.0,          # la valeur jugée (max/min/moyenne)
-          "in_range": False,
-          "advice": "Selle probablement trop haute."   # "" si dans la plage
-        }
+        {"joint": "knee", "value": 155.0, "in_range": False,
+         "advice": "Selle probablement trop haute."}   # advice="" si dans la plage
     Les articulations sans mesure exploitable (None) sont ignorées.
     """
     findings = []
@@ -104,17 +103,18 @@ def build_report(findings: list) -> str:
 def get_ai_feedback(findings: list, comment: str = "") -> str:
     """
     Version enrichie : envoie les constats + le commentaire du cycliste à
-    l'API Claude pour un conseil personnalisé et bienveillant.
+    Gemini pour un conseil personnalisé et bienveillant.
 
     En cas de souci (pas de clé, pas de réseau...), retombe sur le bilan
     local build_report() : jamais de plantage.
     """
-    api_key = os.getenv("ANTHROPIC_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         return build_report(findings)
 
     try:
-        import anthropic
+        from google import genai
+        from google.genai import types
 
         # On sérialise les constats en texte simple pour le prompt.
         constats = "\n".join(
@@ -126,20 +126,22 @@ def get_ai_feedback(findings: list, comment: str = "") -> str:
         if comment.strip():
             user_msg += f"\n\nCommentaire du cycliste : {comment}"
 
-        client = anthropic.Anthropic(api_key=api_key)
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=400,
-            system=(
-                "Tu es un expert en bike fitting bienveillant. À partir des "
-                "constats d'angles et du commentaire éventuel du cycliste, "
-                "donne un retour clair en 3-4 phrases : ce qui va, ce qui "
-                "mérite un ajustement, et une piste concrète en cm. Reste factuel "
-                "et rassurant, pas de jargon inutile."
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=user_msg,
+            config=types.GenerateContentConfig(
+                system_instruction=(
+                    "Tu es un expert en bike fitting bienveillant. À partir des "
+                    "constats d'angles et du commentaire éventuel du cycliste, "
+                    "donne un retour clair en 3-4 phrases : ce qui va, ce qui "
+                    "mérite un ajustement, et une piste concrète en cm. Reste factuel "
+                    "et rassurant, sans jargon inutile."
+                ),
+                max_output_tokens=400,
             ),
-            messages=[{"role": "user", "content": user_msg}],
         )
-        return response.content[0].text
+        return response.text
 
     except Exception as e:
         print(f"[feedback] Erreur API ({e}), bilan local utilisé.")
@@ -148,7 +150,6 @@ def get_ai_feedback(findings: list, comment: str = "") -> str:
 
 # Test manuel : python -m src.core.feedback
 if __name__ == "__main__":
-    # Petit faux "session" pour tester sans webcam.
     from src.core.angles import AngleRange
 
     class FakeSession:
