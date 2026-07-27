@@ -25,7 +25,9 @@ from src.core.angles import JOINT_ANGLES
 
 load_dotenv()
 
-MODEL_NAME = "gemini-2.5-flash"
+# Alias "latest" : suit la dernière version flash ("gemini-2.5-flash" est
+# retiré pour les nouvelles clés → 404), évite les 404 de retrait futurs.
+MODEL_NAME = "gemini-flash-latest"
 
 
 # Traduction "articulation hors plage" → cause probable côté réglage vélo.
@@ -136,9 +138,11 @@ def get_ai_feedback(findings: list, comment: str = "") -> str:
                     "constats d'angles et du commentaire éventuel du cycliste, "
                     "donne un retour clair en 3-4 phrases : ce qui va, ce qui "
                     "mérite un ajustement, et une piste concrète en cm. Reste factuel "
-                    "et rassurant, sans jargon inutile."
+                    "et rassurant, sans jargon inutile. Donne toujours l'ajustement à faire sur le vélo (hauteur/recul de selle )"
                 ),
-                max_output_tokens=400,
+                # Budget généreux : les tokens de « réflexion » du modèle
+                # comptent dedans, 400 tronquait la réponse en pleine phrase.
+                max_output_tokens=4000,
             ),
         )
         return response.text

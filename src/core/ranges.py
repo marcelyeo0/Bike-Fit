@@ -1,12 +1,12 @@
 """
 ranges.py — Obtient les plages d'angles cibles à partir du profil du cycliste.
 
-Flux : profil (réponses du questionnaire) → prompt → API Claude → JSON →
+Flux : profil (réponses du questionnaire) → prompt → API Gemini → JSON →
 dict de AngleRange, prêt à être passé à SessionAngles.
 
 Pré-requis :
-    pip install anthropic python-dotenv
-    Un fichier .env à la racine contenant :  ANTHROPIC_API_KEY=sk-ant-...
+    pip install google-genai python-dotenv
+    Un fichier .env à la racine contenant :  GEMINI_API_KEY=...
 
 Utilisation :
     from src.core.ranges import get_target_ranges
@@ -25,6 +25,11 @@ from src.core.angles import AngleRange, JOINT_ANGLES
 # Charge le .env (lit le fichier et met les variables dans os.environ).
 # À faire une seule fois, à l'import du module.
 load_dotenv()
+
+# Même modèle que feedback.py : un seul fournisseur pour tout le projet.
+# Alias "latest" : Google le fait pointer vers la dernière version flash,
+# donc pas de 404 le jour où un numéro de version est retiré.
+MODEL_NAME = "gemini-flash-latest"
 
 
 # Plages par défaut, utilisées en SECOURS si l'API échoue (pas de réseau,
@@ -96,32 +101,35 @@ def get_target_ranges(bike_type: str, position: str, comment: str = "") -> dict:
     En cas de problème (pas de clé, pas de réseau, réponse illisible),
     renvoie DEFAULT_RANGES au lieu de planter : le logiciel reste utilisable.
     """
-    api_key = os.getenv("ANTHROPIC_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         print("[ranges] Pas de clé API trouvée, utilisation des plages par défaut.")
         return DEFAULT_RANGES
 
     try:
         # Import ici (pas en haut) pour que le module se charge même si
-        # 'anthropic' n'est pas installé — utile tant que tu testes le reste.
-        import anthropic
+        # 'google-genai' n'est pas installé — utile tant que tu testes le reste.
+        from google import genai
+        from google.genai import types
 
-        client = anthropic.Anthropic(api_key=api_key)
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=300,                     # la réponse est courte
-            system=SYSTEM_PROMPT,
-            messages=[
-                {
-                    "role": "user",
-                    "content": _build_user_message(bike_type, position, comment),
-                }
-            ],
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=_build_user_message(bike_type, position, comment),
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                # Force une réponse JSON pure : plus fiable que la seule
+                # consigne du prompt (pas de texte autour, pas de ```).
+                response_mime_type="application/json",
+                # Les modèles Gemini récents « réfléchissent » avant de
+                # répondre et ces tokens de réflexion comptent dans
+                # max_output_tokens : un petit budget tronquerait la réponse
+                # avant même le JSON. D'où cette valeur généreuse.
+                max_output_tokens=4000,
+            ),
         )
 
-        # La réponse est une liste de blocs ; on prend le texte du premier.
-        raw_text = response.content[0].text
-        return _parse_ranges(raw_text)
+        return _parse_ranges(response.text)
 
     except Exception as e:
         # On ne laisse JAMAIS une erreur API casser l'app : on retombe
