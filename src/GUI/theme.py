@@ -23,6 +23,7 @@ ACCENT = "#3572D6"        # bleu désaturé (~75 % de saturation)
 ACCENT_HOVER = "#2C5FB4"  # accent au survol
 GREEN = "#2FA35C"         # dans la plage (émeraude désaturée)
 RED = "#D05353"           # hors plage (rouge désaturé)
+RED_HOVER = "#B84545"     # rouge au survol (bouton Terminer)
 GRAY = "#A1A1AA"          # pas de mesure (zinc-400)
 TEXT = "#1B1B1F"          # texte principal (off-black)
 TEXT_2 = "#71717A"        # texte secondaire (zinc-500)
@@ -42,6 +43,17 @@ FONT_SECTION = (FAMILY, 12, "bold")     # en-têtes de groupe (gris, discrets)
 FONT_BODY = (FAMILY, 14)
 FONT_VALUE = (MONO, 24, "bold")         # angles : chasse fixe obligatoire
 FONT_SMALL = (FAMILY, 12)
+FONT_BUTTON = (FAMILY, 15, "bold")      # boutons d'action
 
 # Rayon commun des surfaces arrondies.
 RADIUS = 16
+
+# Hauteur commune des boutons d'action (pleine largeur).
+BTN_HEIGHT = 48
+
+
+def to_bgr(hex_color: str) -> tuple:
+    """'#RRGGBB' → (B, G, R) pour OpenCV. Une seule source de vérité :
+    les couleurs du squelette suivent la palette sans duplication manuelle."""
+    h = hex_color.lstrip("#")
+    return (int(h[4:6], 16), int(h[2:4], 16), int(h[0:2], 16))

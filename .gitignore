@@ -6,3 +6,6 @@ venv/
 draft/
 config/
 graphify-out/
+.impeccable/
+DESIGN.md
+PRODUCT.md

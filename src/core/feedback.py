@@ -86,12 +86,16 @@ JOINT_LABELS = {
 }
 
 
-def build_report(findings: list) -> str:
-    """Transforme les constats en texte lisible (version LOCALE, sans IA)."""
+def build_report(findings: list, note: str = "") -> str:
+    """Transforme les constats en texte lisible (version LOCALE, sans IA).
+    `note` : ligne de contexte affichée sous le titre (ex. repli hors ligne)."""
     if not findings:
         return "Pas assez de données pour établir un bilan."
 
-    lines = ["=== Bilan de position ==="]
+    lines = ["Bilan de position"]
+    if note:
+        lines.append(note)
+    lines.append("")
     for f in findings:
         label = JOINT_LABELS.get(f["joint"], f["joint"])
         etat = "OK" if f["in_range"] else "hors plage"
@@ -112,7 +116,8 @@ def get_ai_feedback(findings: list, comment: str = "") -> str:
     """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        return build_report(findings)
+        return build_report(findings,
+                            note="(bilan local — personnalisation IA indisponible)")
 
     try:
         from google import genai
@@ -149,7 +154,8 @@ def get_ai_feedback(findings: list, comment: str = "") -> str:
 
     except Exception as e:
         print(f"[feedback] Erreur API ({e}), bilan local utilisé.")
-        return build_report(findings)
+        return build_report(findings,
+                            note="(bilan local — personnalisation IA indisponible)")
 
 
 # Test manuel : python -m src.core.feedback

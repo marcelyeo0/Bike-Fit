@@ -32,16 +32,17 @@ import customtkinter as ctk
 from PIL import Image
 
 from src.core.pose import PoseDetector, SEGMENTS
+from src.core.ranges import DEFAULT_RANGES
 from src.core.angles import SessionAngles, JUDGE_STAT
 from src.core.feedback import analyse_session, get_ai_feedback, JOINT_LABELS
 from src.GUI import theme
 from src.GUI.anim import fade_in, fade_out, Ellipsis
 
 
-# Couleurs OpenCV (BGR !) alignées sur le thème.
-_BGR_GREEN = (92, 163, 47)
-_BGR_RED = (83, 83, 208)
-_BGR_GRAY = (170, 161, 161)
+# Couleurs OpenCV (BGR !) dérivées du thème : une seule source de vérité.
+_BGR_GREEN = theme.to_bgr(theme.GREEN)
+_BGR_RED = theme.to_bgr(theme.RED)
+_BGR_GRAY = theme.to_bgr(theme.GRAY)
 
 # Libellés français des statistiques jugées.
 _STAT_LABELS = {"max": "max", "min": "min", "mean": "moyenne"}
@@ -116,8 +117,7 @@ class AnalysisWindow(ctk.CTkToplevel):
         # --- Webcam + détecteur de pose ---
         self._cap = cv2.VideoCapture(0)
         if not self._cap.isOpened():
-            self._video_label.configure(
-                text="Impossible d'ouvrir la webcam.", font=theme.FONT_BODY)
+            self._show_camera_error()
             return
 
         self._detector = PoseDetector(model_path)
@@ -160,6 +160,13 @@ class AnalysisWindow(ctk.CTkToplevel):
         ctk.CTkLabel(stats_card, text="ARTICULATIONS",
                      font=theme.FONT_SECTION, text_color=theme.TEXT_2,
                      anchor="w").pack(fill="x", padx=14, pady=(10, 0))
+        # État honnête : si l'IA n'a pas répondu, les plages affichées sont
+        # les valeurs standard — l'opérateur doit le savoir.
+        if self._ranges is DEFAULT_RANGES:
+            ctk.CTkLabel(stats_card,
+                         text="Plages standard — personnalisation IA indisponible.",
+                         font=theme.FONT_SMALL, text_color=theme.TEXT_2,
+                         anchor="w").pack(fill="x", padx=14, pady=(2, 0))
         self._rows = {}
         joints = list(JOINT_LABELS)
         for i, joint in enumerate(joints):
@@ -185,11 +192,27 @@ class AnalysisWindow(ctk.CTkToplevel):
             anchor="nw", justify="left", wraplength=290)
         self._advice.pack(fill="both", expand=True, padx=14, pady=(0, 12))
 
-        ctk.CTkButton(panel, text="Terminer la session",
-                      font=(theme.FAMILY, 15, "bold"),
-                      corner_radius=theme.RADIUS, height=46,
-                      fg_color=theme.RED, hover_color="#B84545",
-                      command=self._finish).pack(fill="x")
+        self._finish_btn = ctk.CTkButton(
+            panel, text="Terminer la session",
+            font=theme.FONT_BUTTON,
+            corner_radius=theme.RADIUS, height=theme.BTN_HEIGHT,
+            fg_color=theme.RED, hover_color=theme.RED_HOVER,
+            command=self._finish)
+        self._finish_btn.pack(fill="x")
+
+    def _show_camera_error(self):
+        """Webcam introuvable : état d'erreur explicite, pas de fenêtre morte.
+        Le problème est nommé, la sortie aussi — le bouton devient un retour."""
+        self._video_label.configure(
+            text="Impossible d'ouvrir la webcam.\n\n"
+                 "Branche ou autorise une caméra,\n"
+                 "puis relance l'analyse depuis le questionnaire.",
+            font=theme.FONT_BODY, justify="center")
+        self._advice.configure(text="Analyse impossible sans caméra.")
+        self._finish_btn.configure(text="Retour au questionnaire",
+                                   fg_color=theme.ACCENT,
+                                   hover_color=theme.ACCENT_HOVER,
+                                   command=self._close)
 
     def _on_video_resize(self, event):
         if event.width > 50 and event.height > 50:
@@ -348,8 +371,8 @@ class AnalysisWindow(ctk.CTkToplevel):
         self._report_box.configure(state="disabled")
 
         ctk.CTkButton(wrapper, text="Fermer",
-                      font=(theme.FAMILY, 15, "bold"),
-                      corner_radius=theme.RADIUS, height=46,
+                      font=theme.FONT_BUTTON,
+                      corner_radius=theme.RADIUS, height=theme.BTN_HEIGHT,
                       fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER,
                       command=self._close).pack(fill="x", pady=(16, 0))
 

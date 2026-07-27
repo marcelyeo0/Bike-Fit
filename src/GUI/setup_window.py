@@ -117,8 +117,8 @@ class SetupWindow(ctk.CTk):
         # --- Bouton principal + état ---
         self._button = ctk.CTkButton(
             form, text="Calculer mes plages d'angles",
-            font=(theme.FAMILY, 15, "bold"),
-            corner_radius=theme.RADIUS, height=48,
+            font=theme.FONT_BUTTON,
+            corner_radius=theme.RADIUS, height=theme.BTN_HEIGHT,
             fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER,
             command=self._submit)
         self._button.pack(fill="x", pady=(22, 6))
