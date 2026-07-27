@@ -5,3 +5,4 @@ venv/
 .vscode/
 draft/
 config/
+graphify-out/
