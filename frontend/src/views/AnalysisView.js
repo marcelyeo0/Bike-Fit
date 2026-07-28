@@ -21,6 +21,7 @@ export default function AnalysisView({ onFinish }) {
   const videoRef = useRef(null);
   const historyRef = useRef({ knee: [], hip: [], elbow: [], shoulder: [] });
   const [camError, setCamError] = useState(false);
+  const [camReady, setCamReady] = useState(false);
   const [rows, setRows] = useState({});          // joint -> {value, ok}
   const [findings, setFindings] = useState([]);
   const [flashKey, setFlashKey] = useState(0);   // relance l'anim du flash
@@ -80,7 +81,21 @@ export default function AnalysisView({ onFinish }) {
             Autorise la caméra puis recharge la page.
           </p>
         ) : (
-          <video ref={videoRef} autoPlay playsInline muted className="video" />
+          <>
+            {!camReady && (
+              <p className="video-fallback video-loading">
+                Démarrage caméra…
+              </p>
+            )}
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="video"
+              onLoadedData={() => setCamReady(true)}
+            />
+          </>
         )}
         <p className="demo-note">
           Aperçu UI. Angles simulés : la détection de pose vit dans

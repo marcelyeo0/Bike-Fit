@@ -28,6 +28,14 @@
   text-decoration: none;
 }
 
+/* Focus clavier : anneau visible sur fond sombre, jamais supprimé. */
+.landing a:focus-visible,
+.landing button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 999px;
+}
+
 /* ---------- Nav : pilule glass flottante ---------- */
 
 .landing-nav {
@@ -115,9 +123,6 @@
   background: radial-gradient(ellipse at center,
               rgb(16 16 19 / 0.25) 0%, rgb(16 16 19 / 0.92) 78%);
 }
-
-/* Le voile est un pseudo-élément du fond : on le pose via un 2e calque */
-.hero-bg { box-shadow: inset 0 0 0 9999px rgb(16 16 19 / 0.35); }
 
 .hero > * {
   position: relative;
@@ -289,6 +294,8 @@
 }
 
 .method-pin {
+  position: sticky;              /* épinglé pendant le défilement des étapes */
+  top: 0;
   align-self: start;
   padding-top: 18dvh;
   height: 100dvh;

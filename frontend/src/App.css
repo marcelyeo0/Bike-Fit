@@ -49,6 +49,18 @@
   transform: scale(0.97);
 }
 
+/* Focus clavier visible partout (boutons, segments, zone de texte). */
+.btn:focus-visible,
+.segment:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.remarks:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .btn--dark {
   background: var(--btn-dark);
   color: var(--text-on-dark);
@@ -269,6 +281,12 @@
 .video-fallback {
   color: var(--text-2-on-dark);
   text-align: center;
+}
+
+/* Attente caméra : posé sur la carte, disparaît au premier flux. */
+.video-loading {
+  position: absolute;
+  z-index: 1;
 }
 
 .demo-note {

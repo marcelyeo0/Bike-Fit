@@ -72,19 +72,15 @@ const MARQUEE_WORDS = [
 
 export default function LandingView({ onStart }) {
   const root = useRef(null);
-  const reduce = typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = typeof window !== 'undefined' && window.matchMedia
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : true;                     // environnement sans matchMedia : statique
 
   useGSAP(() => {
     if (reduce) return;
 
-    // Titre de la méthode épinglé pendant que les étapes défilent.
-    ScrollTrigger.create({
-      trigger: '.method',
-      start: 'top top',
-      end: 'bottom bottom',
-      pin: '.method-pin',
-    });
+    // (Le titre de la méthode est épinglé en CSS position:sticky —
+    //  plus robuste qu'un pin GSAP à l'intérieur d'une grille.)
 
     // Étapes : arrivée douce, une par une.
     gsap.utils.toArray('.step').forEach((el) => {
@@ -112,7 +108,8 @@ export default function LandingView({ onStart }) {
     });
 
     // Hero : entrée unique, séquencée (un seul moment auteur).
-    gsap.from('.hero > *', {
+    // Contenu seulement : le fond (.hero-bg) reste immobile.
+    gsap.from('.hero-title, .hero-sub, .hero-ctas', {
       opacity: 0,
       y: 24,
       duration: 0.8,

@@ -10,17 +10,22 @@
  */
 import { useState } from 'react';
 import './App.css';
+import LandingView from './views/LandingView';
 import SetupView from './views/SetupView';
 import AnalysisView from './views/AnalysisView';
 import ReportView from './views/ReportView';
 
 export default function App() {
-  const [view, setView] = useState('setup');       // setup | analysis | report
+  // landing (marketing) -> setup -> analysis -> report
+  const [view, setView] = useState('landing');
   const [profile, setProfile] = useState(null);
   const [findings, setFindings] = useState([]);
 
   return (
     <div className="app">
+      {view === 'landing' && (
+        <LandingView key="landing" onStart={() => setView('setup')} />
+      )}
       {view === 'setup' && (
         <SetupView
           key="setup"

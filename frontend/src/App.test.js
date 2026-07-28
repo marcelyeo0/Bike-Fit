@@ -1,10 +1,14 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import App from './App';
 
-test('affiche le questionnaire au démarrage', () => {
+test('landing puis questionnaire via le CTA', () => {
   render(<App />);
-  expect(screen.getByText(/Ton profil/i)).toBeInTheDocument();
   expect(
-    screen.getByRole('button', { name: /Calculer mes plages/i })
+    screen.getByText(/La posture de tes clients/i)
   ).toBeInTheDocument();
+
+  fireEvent.click(
+    screen.getAllByRole('button', { name: /Lancer l'analyse/i })[0]
+  );
+  expect(screen.getByText(/Ton profil/i)).toBeInTheDocument();
 });
