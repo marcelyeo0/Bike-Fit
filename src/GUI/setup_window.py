@@ -19,6 +19,7 @@ puis callback on_profile_ready(profile, ranges) vers main.py.
 """
 
 import threading
+import tkinter as tk
 
 import customtkinter as ctk
 
@@ -39,6 +40,9 @@ class SetupWindow(ctk.CTk):
         self.resizable(False, False)
 
         self._build_ui()
+        # Entrée = valider (attente desktop standard), sauf dans la zone de
+        # remarques où Entrée doit rester un retour à la ligne.
+        self.bind("<Return>", self._on_return)
         fade_in(self, 200)
 
     # ------------------------------------------------------------------ #
@@ -145,7 +149,14 @@ class SetupWindow(ctk.CTk):
     # ------------------------------------------------------------------ #
     # Validation : appel API dans un thread
     # ------------------------------------------------------------------ #
+    def _on_return(self, event):
+        if isinstance(event.widget, tk.Text):
+            return                      # zone Remarques : retour à la ligne
+        self._submit()
+
     def _submit(self):
+        if self._button.cget("state") == "disabled":
+            return                      # appel API déjà en cours
         profile = {
             "bike_type": self._bike.get().lower(),
             "position": self._position.get().lower(),

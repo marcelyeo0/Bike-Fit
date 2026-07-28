@@ -24,6 +24,7 @@ Choix de design :
 En fin de session : bilan personnalisé via Gemini (thread + repli local).
 """
 
+import math
 import threading
 import time
 
@@ -33,10 +34,11 @@ from PIL import Image
 
 from src.core.pose import PoseDetector, SEGMENTS
 from src.core.ranges import DEFAULT_RANGES
-from src.core.angles import SessionAngles, JUDGE_STAT
+from src.core.angles import (SessionAngles, JUDGE_STAT, JOINT_ANGLES,
+                             compute_angle)
 from src.core.feedback import analyse_session, get_ai_feedback, JOINT_LABELS
 from src.GUI import theme
-from src.GUI.anim import fade_in, fade_out, Ellipsis
+from src.GUI.anim import fade_in, fade_out, WaitingDots
 
 
 # Couleurs OpenCV (BGR !) dérivées du thème : une seule source de vérité.
@@ -51,6 +53,15 @@ _STAT_LABELS = {"max": "max", "min": "min", "mean": "moyenne"}
 _STABLE_FRAMES = 12
 # Rafraîchissement des textes (valeurs + conseils) : toutes les N frames.
 _TEXT_EVERY = 15
+# Lectures caméra ratées consécutives avant de déclarer le signal perdu
+# (~1,5 s : un raté isolé arrive, une caméra débranchée ne revient pas).
+_CAM_LOST_FRAMES = 90
+# Opacité des secteurs d'angle dessinés sur la vidéo (référence visuelle
+# type « bike fit » : assez visible pour guider, assez léger pour ne pas
+# masquer le corps du cycliste).
+_ARC_ALPHA = 0.35
+_ARC_FONT = cv2.FONT_HERSHEY_SIMPLEX
+_BGR_LABEL_BG = (28, 28, 28)   # fond des étiquettes texte sur la vidéo
 
 
 class _JointRow(ctk.CTkFrame):
@@ -103,13 +114,21 @@ class AnalysisWindow(ctk.CTkToplevel):
         self._shown_state = {j: None for j in JOINT_LABELS}
         self._pending = {j: [None, 0] for j in JOINT_LABELS}  # [candidat, nb]
 
+        # Textes des étiquettes d'angle sur la vidéo. Les ARCS suivent la
+        # pose à pleine cadence (géométrie), mais le CHIFFRE affiché n'est
+        # rafraîchi que 4 fois/seconde — même règle anti-tremblement que le
+        # panneau de droite.
+        self._arc_texts = {}
+
         # Taille d'affichage vidéo, mise en cache (winfo_* coûte cher à 60 fps).
         self._view_size = (640, 480)
 
         self.title("BikeFit — Analyse")
         self.geometry("1180x660")
         self.minsize(960, 560)
-        self.protocol("WM_DELETE_WINDOW", self._close)
+        # Fermer par la croix en pleine session ne jette JAMAIS les mesures :
+        # on passe par le bilan (une session de pédalage ne se refait pas).
+        self.protocol("WM_DELETE_WINDOW", self._handle_close)
 
         self._build_ui()
         fade_in(self, 200)
@@ -124,6 +143,7 @@ class AnalysisWindow(ctk.CTkToplevel):
         self._session = SessionAngles(ranges)
         self._start = time.monotonic()   # base des timestamps LIVE_STREAM
         self._frame_count = 0
+        self._cam_fails = 0              # lectures ratées consécutives
 
         self._running = True
         self._loop()
@@ -137,11 +157,13 @@ class AnalysisWindow(ctk.CTkToplevel):
         self.grid_rowconfigure(0, weight=1)
 
         # --- Zone vidéo (surface sombre arrondie, pas de noir pur) ---
-        video_card = ctk.CTkFrame(self, fg_color=theme.BG_DARK,
-                                  corner_radius=theme.RADIUS)
-        video_card.grid(row=0, column=0, sticky="nsew", padx=(16, 8), pady=16)
-        video_card.grid_propagate(False)
-        self._video_label = ctk.CTkLabel(video_card, text="Démarrage caméra…",
+        self._video_card = ctk.CTkFrame(self, fg_color=theme.BG_DARK,
+                                        corner_radius=theme.RADIUS)
+        self._video_card.grid(row=0, column=0, sticky="nsew",
+                              padx=(16, 8), pady=16)
+        self._video_card.grid_propagate(False)
+        self._video_label = ctk.CTkLabel(self._video_card,
+                                         text="Démarrage caméra…",
                                          text_color=theme.TEXT_2_ON_DARK)
         self._video_label.pack(expand=True, fill="both", padx=6, pady=6)
         # La taille du cadre change rarement : on la met en cache ici plutôt
@@ -186,9 +208,11 @@ class AnalysisWindow(ctk.CTkToplevel):
         ctk.CTkLabel(advice_card, text="CONSEILS EN DIRECT",
                      font=theme.FONT_SECTION, text_color=theme.TEXT_2,
                      anchor="w").pack(fill="x", padx=14, pady=(10, 2))
+        # Body, pas Small : les conseils sont du contenu, lus en parlant au
+        # client, souvent à distance du portable.
         self._advice = ctk.CTkLabel(
             advice_card, text="Pédale normalement, j'observe ta position…",
-            font=theme.FONT_SMALL, text_color=theme.TEXT,
+            font=theme.FONT_BODY, text_color=theme.TEXT,
             anchor="nw", justify="left", wraplength=290)
         self._advice.pack(fill="both", expand=True, padx=14, pady=(0, 12))
 
@@ -214,6 +238,25 @@ class AnalysisWindow(ctk.CTkToplevel):
                                    hover_color=theme.ACCENT_HOVER,
                                    command=self._close)
 
+    def _show_camera_lost(self):
+        """Caméra perdue EN COURS de session : une image figée sans un mot
+        est un état trompeur. On nomme le problème et on préserve les
+        mesures déjà prises — Terminer produit le bilan normalement."""
+        self._release_camera()
+        # Le label vidéo porte encore la dernière frame : on le remplace
+        # par un label texte propre (pas de texte invisible derrière l'image).
+        self._video_label.destroy()
+        self._video_label = ctk.CTkLabel(
+            self._video_card,
+            text="Signal caméra perdu.\n\n"
+                 "Les mesures déjà prises sont conservées :\n"
+                 "termine la session pour obtenir le bilan.",
+            font=theme.FONT_BODY, justify="center",
+            text_color=theme.TEXT_2_ON_DARK)
+        self._video_label.pack(expand=True, fill="both", padx=6, pady=6)
+        self._advice.configure(
+            text="Caméra déconnectée — l'analyse est interrompue.")
+
     def _on_video_resize(self, event):
         if event.width > 50 and event.height > 50:
             self._view_size = (event.width, event.height)
@@ -226,7 +269,14 @@ class AnalysisWindow(ctk.CTkToplevel):
             return
 
         ok, frame = self._cap.read()
-        if ok:
+        if not ok:
+            # Une lecture ratée isolée arrive ; une série = caméra débranchée.
+            self._cam_fails += 1
+            if self._cam_fails >= _CAM_LOST_FRAMES:
+                self._show_camera_lost()
+                return                    # la boucle s'arrête, la session reste
+        else:
+            self._cam_fails = 0
             frame = cv2.flip(frame, 1)   # effet miroir, plus naturel
 
             timestamp_ms = int((time.monotonic() - self._start) * 1000)
@@ -236,6 +286,7 @@ class AnalysisWindow(ctk.CTkToplevel):
             if joints is not None:
                 self._session.update(joints)
                 self._update_hysteresis()
+                self._draw_angle_arcs(frame, joints)
                 self._draw_skeleton(frame, joints)
 
             # Les TEXTES se rafraîchissent 4 fois/seconde : un chiffre qui
@@ -278,6 +329,75 @@ class AnalysisWindow(ctk.CTkToplevel):
             return _BGR_GRAY
         return _BGR_GREEN if state else _BGR_RED
 
+    def _draw_angle_arcs(self, frame, joints):
+        """Secteurs d'angle translucides + valeur courante à chaque
+        articulation jugée (référence visuelle type « bike fit ») : on VOIT
+        l'angle sur le corps, pas seulement le chiffre dans le panneau.
+        Vert/rouge selon l'état stabilisé, comme le squelette."""
+        overlay = frame.copy()
+        labels = []
+        refresh = self._frame_count % _TEXT_EVERY == 0
+
+        for name, (pa, vx, pb) in JOINT_ANGLES.items():
+            va = (joints[pa][0] - joints[vx][0], joints[pa][1] - joints[vx][1])
+            vb = (joints[pb][0] - joints[vx][0], joints[pb][1] - joints[vx][1])
+            la, lb = math.hypot(*va), math.hypot(*vb)
+            if la < 1 or lb < 1:
+                continue                 # points confondus : rien à dessiner
+
+            # Rayon proportionnel aux segments, borné pour rester lisible.
+            radius = int(max(20, min(48, 0.35 * min(la, lb))))
+
+            # Le secteur couvre le PETIT côté de l'angle (celui qu'on mesure).
+            deg_a = math.degrees(math.atan2(va[1], va[0]))
+            deg_b = math.degrees(math.atan2(vb[1], vb[0]))
+            span = (deg_b - deg_a) % 360
+            if span > 180:
+                deg_a, span = deg_b, 360 - span
+
+            color = self._joint_color(name)
+            cv2.ellipse(overlay, joints[vx], (radius, radius), 0,
+                        deg_a, deg_a + span, color, -1)
+
+            # Étiquette sur la bissectrice, à l'extérieur du secteur.
+            bx = va[0] / la + vb[0] / lb
+            by = va[1] / la + vb[1] / lb
+            norm = math.hypot(bx, by)
+            if norm < 1e-3:              # segments alignés : au-dessus
+                bx, by, norm = 0.0, -1.0, 1.0
+            pos = (int(joints[vx][0] + bx / norm * (radius + 26)),
+                   int(joints[vx][1] + by / norm * (radius + 26)))
+
+            if refresh or name not in self._arc_texts:
+                angle = compute_angle(joints[pa], joints[vx], joints[pb])
+                rng = self._ranges[name]
+                self._arc_texts[name] = (
+                    f"{angle:.0f}°",
+                    f"{rng.min_deg:.0f}-{rng.max_deg:.0f}°")
+            labels.append((name, pos, color))
+
+        cv2.addWeighted(overlay, _ARC_ALPHA, frame, 1 - _ARC_ALPHA, 0, frame)
+        for name, pos, color in labels:
+            self._draw_arc_label(frame, *self._arc_texts[name], pos, color)
+
+    @staticmethod
+    def _draw_arc_label(frame, value, target, pos, color):
+        """Valeur courante (grande) + plage cible (petite) sur fond sombre :
+        sans fond, le texte se perd dans l'image du cycliste."""
+        (vw, vh), _ = cv2.getTextSize(value, _ARC_FONT, 0.6, 2)
+        (tw, th), _ = cv2.getTextSize(target, _ARC_FONT, 0.4, 1)
+        box_w, box_h = max(vw, tw) + 12, vh + th + 14
+        h, w = frame.shape[:2]
+        x = max(2, min(pos[0] - box_w // 2, w - box_w - 2))
+        y = max(2, min(pos[1] - box_h // 2, h - box_h - 2))
+
+        cv2.rectangle(frame, (x, y), (x + box_w, y + box_h),
+                      _BGR_LABEL_BG, -1)
+        cv2.putText(frame, value, (x + 6, y + vh + 4),
+                    _ARC_FONT, 0.6, color, 2, cv2.LINE_AA)
+        cv2.putText(frame, target, (x + 6, y + vh + th + 9),
+                    _ARC_FONT, 0.4, _BGR_GRAY, 1, cv2.LINE_AA)
+
     def _draw_skeleton(self, frame, joints):
         for name_a, name_b in SEGMENTS:
             cv2.line(frame, joints[name_a], joints[name_b],
@@ -316,6 +436,14 @@ class AnalysisWindow(ctk.CTkToplevel):
     # ------------------------------------------------------------------ #
     # Fin de session : bilan IA
     # ------------------------------------------------------------------ #
+    def _handle_close(self):
+        """Croix de la fenêtre. En pleine session : on termine proprement
+        (bilan) au lieu de jeter les mesures ; sinon fermeture normale."""
+        if self._running:
+            self._finish()
+        else:
+            self._close()
+
     def _finish(self):
         if not self._running:
             return
@@ -335,7 +463,10 @@ class AnalysisWindow(ctk.CTkToplevel):
 
     def _fetch_report(self, findings):
         report = get_ai_feedback(findings, comment=self._comment)
-        self.after(0, lambda: self._report_ready(report))
+        try:
+            self.after(0, lambda: self._report_ready(report))
+        except Exception:
+            pass   # fenêtre fermée pendant l'appel : rien à afficher
 
     def _show_report_view(self):
         """Remplace tout le contenu de la fenêtre par la vue « Bilan »."""
@@ -360,8 +491,8 @@ class AnalysisWindow(ctk.CTkToplevel):
             card, text="Génération du bilan personnalisé…",
             font=theme.FONT_BODY, text_color=theme.TEXT_2, anchor="w")
         self._report_status.pack(fill="x", padx=16, pady=(16, 0))
-        self._dots = Ellipsis(self._report_status,
-                              "Génération du bilan personnalisé")
+        self._dots = WaitingDots(self._report_status,
+                                 "Génération du bilan personnalisé")
         self._dots.start()
 
         self._report_box = ctk.CTkTextbox(
@@ -370,11 +501,20 @@ class AnalysisWindow(ctk.CTkToplevel):
         self._report_box.pack(fill="both", expand=True, padx=16, pady=16)
         self._report_box.configure(state="disabled")
 
+        # Mention légale (principe produit n°1) : orientation, pas diagnostic.
+        ctk.CTkLabel(wrapper,
+                     text="Orientation posturale à titre indicatif — ne "
+                          "remplace ni un avis médical ni un bike fitting "
+                          "complet.",
+                     font=theme.FONT_SMALL, text_color=theme.TEXT_2,
+                     anchor="w", justify="left"
+                     ).pack(fill="x", pady=(8, 0))
+
         ctk.CTkButton(wrapper, text="Fermer",
                       font=theme.FONT_BUTTON,
                       corner_radius=theme.RADIUS, height=theme.BTN_HEIGHT,
                       fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER,
-                      command=self._close).pack(fill="x", pady=(16, 0))
+                      command=self._close).pack(fill="x", pady=(12, 0))
 
     def _report_ready(self, report: str):
         if not self.winfo_exists():

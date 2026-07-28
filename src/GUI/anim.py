@@ -44,12 +44,13 @@ def _fade(window, start: float, end: float, duration_ms: int, then):
     step()
 
 
-class Ellipsis:
+class WaitingDots:
     """
     Ellipse animée pour les attentes ("Génération du bilan", ".", "..", "...").
     Indique que le programme travaille, sans spinner ni emoji.
+    (Nommée WaitingDots pour ne pas masquer le builtin Python `Ellipsis`.)
 
-        dots = Ellipsis(label, "Génération du bilan personnalisé")
+        dots = WaitingDots(label, "Génération du bilan personnalisé")
         dots.start()
         ...quand la réponse arrive :
         dots.stop()

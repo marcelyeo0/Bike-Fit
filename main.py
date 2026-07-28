@@ -23,7 +23,7 @@ MODEL_PATH = "config/pose_landmarker.task"
 
 
 def main():
-    ctk.set_appearance_mode("light")     # le style iOS est pensé en clair
+    ctk.set_appearance_mode("light")     # design system pensé en thème clair
 
     def launch_analysis(profile: dict, ranges: dict):
         # Le questionnaire s'efface pendant l'analyse et revient à la fin.
