@@ -25,12 +25,13 @@ MODEL_PATH = "config/pose_landmarker.task"
 def main():
     ctk.set_appearance_mode("light")     # design system pensé en thème clair
 
-    def launch_analysis(profile: dict, ranges: dict):
+    def launch_analysis(profile: dict, ranges: dict, advice: dict):
         # Le questionnaire s'efface pendant l'analyse et revient à la fin.
         app.withdraw()
         AnalysisWindow(
             app,
             ranges=ranges,
+            advice=advice,
             comment=profile["comment"],
             model_path=MODEL_PATH,
             on_close=app.deiconify,

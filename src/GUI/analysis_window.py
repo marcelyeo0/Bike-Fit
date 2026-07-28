@@ -103,9 +103,12 @@ class AnalysisWindow(ctk.CTkToplevel):
     """Fenêtre d'analyse : vidéo à gauche, feedback temps réel à droite."""
 
     def __init__(self, master, ranges: dict, comment: str,
-                 model_path: str, on_close=None):
+                 model_path: str, advice: dict = None, on_close=None):
         super().__init__(master, fg_color=theme.BG)
         self._ranges = ranges
+        # Conseils de réglage vélo personnalisés par l'IA au setup
+        # (repli : diagnostics standard dans analyse_session).
+        self._advice_map = advice or {}
         self._comment = comment
         self._on_close = on_close
         self._running = False
@@ -423,7 +426,8 @@ class AnalysisWindow(ctk.CTkToplevel):
                            self._shown_state[joint])
 
     def _update_advice(self):
-        findings = analyse_session(self._session, self._ranges)
+        findings = analyse_session(self._session, self._ranges,
+                                   self._advice_map)
         advices = [f["advice"] for f in findings if f["advice"]]
         if not findings:
             text = "Pédale normalement, j'observe ta position…"
@@ -448,7 +452,8 @@ class AnalysisWindow(ctk.CTkToplevel):
         if not self._running:
             return
         self._running = False
-        findings = analyse_session(self._session, self._ranges)
+        findings = analyse_session(self._session, self._ranges,
+                                   self._advice_map)
         self._release_camera()
 
         # Crossfade : fondu de sortie → reconstruction → fondu d'entrée.

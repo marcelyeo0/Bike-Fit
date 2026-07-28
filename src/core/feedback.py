@@ -30,30 +30,39 @@ load_dotenv()
 MODEL_NAME = "gemini-flash-latest"
 
 
-# Traduction "articulation hors plage" → cause probable côté réglage vélo.
+# Traduction "articulation hors plage" → réglage vélo à faire. Version
+# STANDARD, utilisée en repli quand l'IA n'a pas fourni de conseils
+# personnalisés au setup (voir ranges.get_target_ranges).
 # Clé : (articulation, direction) où direction vaut "high" (au-dessus de la
 # plage) ou "low" (en dessous).
 DIAGNOSTICS = {
-    ("knee", "high"): "Extension du genou trop grande : selle probablement trop haute.",
-    ("knee", "low"): "Genou trop fléchi en bas : selle probablement trop basse.",
-    ("hip", "high"): "Hanche très ouverte : position sans doute trop droite.",
-    ("hip", "low"): "Hanche très fermée : position agressive, tension possible bas du dos.",
-    ("elbow", "high"): "Bras trop tendus : cintre/potence peut-être trop loin.",
-    ("elbow", "low"): "Bras trop pliés : cockpit peut-être trop court.",
-    ("shoulder", "high"): "Épaules très ouvertes : allonge importante.",
-    ("shoulder", "low"): "Épaules fermées : buste peu incliné.",
+    ("knee", "high"): "Selle trop haute : abaisse-la de 3 mm par degré d'écart.",
+    ("knee", "low"): "Selle trop basse : remonte-la de 3 mm par degré d'écart.",
+    ("hip", "high"): "Hanche très ouverte : recule la selle de 5 mm ou allonge le cockpit.",
+    ("hip", "low"): "Hanche très fermée : avance la selle de 5 mm ou remonte le cintre.",
+    ("elbow", "high"): "Bras trop tendus : raccourcis la potence de 10 mm ou recule la selle.",
+    ("elbow", "low"): "Bras trop pliés : allonge la potence de 10 mm.",
+    ("shoulder", "high"): "Épaules très ouvertes : potence plus courte ou plus haute.",
+    ("shoulder", "low"): "Épaules fermées : abaisse le cintre ou allonge la potence.",
 }
 
 
-def analyse_session(session, ranges: dict) -> list:
+def analyse_session(session, ranges: dict, advice_map: dict = None) -> list:
     """
     Compare chaque angle mesuré à sa plage et renvoie une liste de constats.
 
+    advice_map : conseils de réglage personnalisés par l'IA au setup
+    ({("knee", "high"): "...", ...}) ; les diagnostics standard servent de
+    repli clé par clé.
+
     Chaque constat est un dict :
         {"joint": "knee", "value": 155.0, "in_range": False,
-         "advice": "Selle probablement trop haute."}   # advice="" si dans la plage
-    Les articulations sans mesure exploitable (None) sont ignorées.
+         "target": (140.0, 150.0), "delta": 5.0,
+         "advice": "Selle trop haute : abaisse-la..."}
+    delta : écart signé à la borne dépassée (0 si dans la plage).
+    advice="" si dans la plage. Articulations sans mesure (None) ignorées.
     """
+    advice_map = advice_map or {}
     findings = []
     for joint in JOINT_ANGLES:
         value = session.judged_value(joint)
@@ -63,15 +72,19 @@ def analyse_session(session, ranges: dict) -> list:
         rng = ranges[joint]
         in_range = rng.contains(value)
 
-        advice = ""
+        advice, delta = "", 0.0
         if not in_range:
             direction = "high" if value > rng.max_deg else "low"
-            advice = DIAGNOSTICS.get((joint, direction), "")
+            delta = value - (rng.max_deg if direction == "high" else rng.min_deg)
+            advice = (advice_map.get((joint, direction))
+                      or DIAGNOSTICS.get((joint, direction), ""))
 
         findings.append({
             "joint": joint,
             "value": round(value, 1),
             "in_range": in_range,
+            "target": (rng.min_deg, rng.max_deg),
+            "delta": round(delta, 1),
             "advice": advice,
         })
     return findings
@@ -123,12 +136,18 @@ def get_ai_feedback(findings: list, comment: str = "") -> str:
         from google import genai
         from google.genai import types
 
-        # On sérialise les constats en texte simple pour le prompt.
-        constats = "\n".join(
-            f"{f['joint']}: {f['value']}° "
-            f"({'dans la plage' if f['in_range'] else 'hors plage'})"
-            for f in findings
-        )
+        # On sérialise les constats en texte simple pour le prompt, AVEC
+        # la plage cible et l'écart signé : sans l'ampleur de l'écart, le
+        # modèle ne peut pas chiffrer un réglage en mm.
+        def _ligne(f):
+            lo, hi = f.get("target", (None, None))
+            base = f"{f['joint']}: {f['value']}°"
+            if lo is not None:
+                base += f" (cible {lo:.0f}–{hi:.0f}°"
+                base += ")" if f["in_range"] else f", écart {f['delta']:+.1f}°)"
+            return base
+
+        constats = "\n".join(_ligne(f) for f in findings)
         user_msg = f"Constats de la session :\n{constats}"
         if comment.strip():
             user_msg += f"\n\nCommentaire du cycliste : {comment}"
@@ -139,11 +158,28 @@ def get_ai_feedback(findings: list, comment: str = "") -> str:
             contents=user_msg,
             config=types.GenerateContentConfig(
                 system_instruction=(
-                    "Tu es un expert en bike fitting bienveillant. À partir des "
-                    "constats d'angles et du commentaire éventuel du cycliste, "
-                    "donne un retour clair en 3-4 phrases : ce qui va, ce qui "
-                    "mérite un ajustement, et une piste concrète en cm. Reste factuel "
-                    "et rassurant, sans jargon inutile. Donne toujours l'ajustement à faire sur le vélo (hauteur/recul de selle )"
+                    "Tu es un expert en bike fitting bienveillant. À partir "
+                    "des constats d'angles (valeur, plage cible, écart signé) "
+                    "et du commentaire éventuel du cycliste, produis un bilan "
+                    "en deux parties, en tutoyant :\n"
+                    "1. Un court paragraphe (2-3 phrases) : ce qui va, ce qui "
+                    "mérite un ajustement, lien avec la douleur signalée le "
+                    "cas échéant.\n"
+                    "2. Une section « Réglages recommandés » : une ligne par "
+                    "composant à ajuster, au format "
+                    "« - Composant : direction, ordre de grandeur en mm — "
+                    "pourquoi (1 proposition) ». Composants possibles : "
+                    "hauteur de selle, avance/recul de selle, hauteur de "
+                    "potence, longueur de potence, cintre. Chiffre chaque "
+                    "réglage à partir de l'écart mesuré (règle usuelle : "
+                    "1° d'écart au genou ≈ 3 mm de hauteur de selle ; reste "
+                    "prudent, propose des pas de 5 mm max à la fois pour le "
+                    "recul et 10 mm pour la potence). Priorité : d'abord la "
+                    "selle (hauteur puis recul), ensuite le cockpit — un "
+                    "réglage de selle change les angles du haut du corps. "
+                    "Si tout est dans les plages, dis-le et ne recommande "
+                    "aucun réglage. Reste factuel et rassurant, sans jargon "
+                    "inutile."
                 ),
                 # Budget généreux : les tokens de « réflexion » du modèle
                 # comptent dedans, 400 tronquait la réponse en pleine phrase.

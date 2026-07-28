@@ -2,12 +2,16 @@
 setup_window.py — Questionnaire de départ, layout split-screen asymétrique.
 
   ┌───────────────┬──────────────────────────┐
-  │  panneau      │  TON VÉLO      [segmenté]│
-  │  sombre       │  POSITION      [segmenté]│
-  │  BikeFit      │  REMARQUES     [textbox] │
-  │  (marque,     │                          │
+  │  panneau      │  VÉLO        │ POSITION  │
+  │  sombre       │  SOUPLESSE   │ NIVEAU    │
+  │  BikeFit      │  VOLUME      │ ÂGE       │
+  │  (marque,     │  REMARQUES     [textbox] │
   │   ancré bas)  │  [Calculer mes plages]   │
   └───────────────┴──────────────────────────┘
+
+Six questions en grille 2 colonnes : chacune aiguille l'IA sur le choix
+des plages d'angles (souplesse → ouverture de hanche, niveau/volume →
+tolérance à l'agressivité, âge → biais confort).
 
 Le panneau de marque est ancré en BAS à gauche (asymétrie assumée : la
 zone haute reste vide, ça respire). Le formulaire suit la règle
@@ -36,7 +40,7 @@ class SetupWindow(ctk.CTk):
         self._on_profile_ready = on_profile_ready
 
         self.title("BikeFit")
-        self.geometry("920x600")
+        self.geometry("960x680")
         self.resizable(False, False)
 
         self._build_ui()
@@ -91,15 +95,38 @@ class SetupWindow(ctk.CTk):
         ctk.CTkLabel(form, text="Ton profil", font=theme.FONT_TITLE,
                      text_color=theme.TEXT, anchor="w").pack(fill="x")
         ctk.CTkLabel(form,
-                     text="Trois réponses suffisent pour calculer tes plages "
-                          "d'angles cibles.",
+                     text="Quelques réponses pour que l'IA calcule des plages "
+                          "d'angles adaptées à TON corps et TA pratique.",
                      font=theme.FONT_SMALL, text_color=theme.TEXT_2,
-                     anchor="w").pack(fill="x", pady=(2, 18))
+                     anchor="w").pack(fill="x", pady=(2, 12))
+
+        # Grille 2 colonnes : 6 questions empilées feraient une fenêtre
+        # interminable. Chaque question aiguille l'IA sur les angles :
+        #   vélo/position → base des plages ;
+        #   souplesse     → ouverture de hanche atteignable ;
+        #   niveau/volume → tolérance à une position agressive ;
+        #   âge           → biais confort.
+        grid = ctk.CTkFrame(form, fg_color="transparent")
+        grid.pack(fill="x")
+        grid.grid_columnconfigure(0, weight=1, uniform="fields")
+        grid.grid_columnconfigure(1, weight=1, uniform="fields")
 
         self._bike = self._segmented_field(
-            form, "TON VÉLO", ["Route", "Gravel", "VTT", "Ville"], "Route")
+            grid, 0, 0, "TON VÉLO", ["Route", "Gravel", "VTT", "Ville"], "Route")
         self._position = self._segmented_field(
-            form, "POSITION RECHERCHÉE", ["Confort", "Mixte", "Aéro"], "Mixte")
+            grid, 0, 1, "POSITION RECHERCHÉE", ["Confort", "Mixte", "Aéro"], "Mixte")
+        self._flexibility = self._segmented_field(
+            grid, 1, 0, "SOUPLESSE (TOUCHER SES PIEDS)",
+            ["Faible", "Moyenne", "Bonne"], "Moyenne")
+        self._level = self._segmented_field(
+            grid, 1, 1, "NIVEAU DE PRATIQUE",
+            ["Débutant", "Intermédiaire", "Confirmé"], "Intermédiaire")
+        self._volume = self._segmented_field(
+            grid, 2, 0, "VOLUME HEBDOMADAIRE",
+            ["< 3 h", "3-6 h", "> 6 h"], "3-6 h")
+        self._age = self._segmented_field(
+            grid, 2, 1, "TRANCHE D'ÂGE",
+            ["< 30 ans", "30-50 ans", "> 50 ans"], "30-50 ans")
 
         # --- Remarques / douleurs (label au-dessus, aide en dessous) ---
         ctk.CTkLabel(form, text="REMARQUES / DOULEURS",
@@ -131,13 +158,18 @@ class SetupWindow(ctk.CTk):
                                     text_color=theme.TEXT_2, anchor="w")
         self._status.pack(fill="x")
 
-    def _segmented_field(self, parent, label: str, values: list, default: str):
-        """Un champ « label au-dessus + choix segmenté », renvoie le widget."""
-        ctk.CTkLabel(parent, text=label, font=theme.FONT_SECTION,
+    def _segmented_field(self, grid, row: int, col: int,
+                         label: str, values: list, default: str):
+        """Un champ « label au-dessus + choix segmenté » dans une cellule
+        de la grille 2 colonnes. Renvoie le widget segmenté."""
+        cell = ctk.CTkFrame(grid, fg_color="transparent")
+        cell.grid(row=row, column=col, sticky="ew",
+                  padx=(0, 12) if col == 0 else (12, 0), pady=(10, 0))
+        ctk.CTkLabel(cell, text=label, font=theme.FONT_SECTION,
                      text_color=theme.TEXT_2, anchor="w"
-                     ).pack(fill="x", pady=(14, 4))
+                     ).pack(fill="x", pady=(0, 4))
         seg = ctk.CTkSegmentedButton(
-            parent, values=values, font=theme.FONT_BODY,
+            cell, values=values, font=theme.FONT_BODY,
             corner_radius=10, height=36,
             selected_color=theme.ACCENT, selected_hover_color=theme.ACCENT_HOVER,
             unselected_color=theme.CARD, unselected_hover_color=theme.SEPARATOR,
@@ -160,6 +192,10 @@ class SetupWindow(ctk.CTk):
         profile = {
             "bike_type": self._bike.get().lower(),
             "position": self._position.get().lower(),
+            "flexibility": self._flexibility.get().lower(),
+            "level": self._level.get().lower(),
+            "volume": self._volume.get(),
+            "age": self._age.get(),
             "comment": self._comment.get("1.0", "end-1c").strip(),
         }
 
@@ -174,16 +210,12 @@ class SetupWindow(ctk.CTk):
 
     def _fetch_ranges(self, profile: dict):
         """Thread secondaire : seul l'appel API vit ici."""
-        ranges = get_target_ranges(
-            bike_type=profile["bike_type"],
-            position=profile["position"],
-            comment=profile["comment"],
-        )
+        ranges, advice = get_target_ranges(profile)
         # Règle d'or tkinter : pas de widgets depuis un autre thread.
-        self.after(0, lambda: self._ranges_ready(profile, ranges))
+        self.after(0, lambda: self._ranges_ready(profile, ranges, advice))
 
-    def _ranges_ready(self, profile: dict, ranges: dict):
+    def _ranges_ready(self, profile: dict, ranges: dict, advice: dict):
         self._button.configure(state="normal",
                                text="Calculer mes plages d'angles")
         self._status.configure(text="")
-        self._on_profile_ready(profile, ranges)
+        self._on_profile_ready(profile, ranges, advice)
