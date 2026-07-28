@@ -82,13 +82,18 @@ Croise ces critères pour ajuster les plages :
 Prends en compte le commentaire du cycliste s'il signale une douleur :
 c'est le critère PRIORITAIRE sur tous les autres.
 
-Les conseils ("advice") doivent être ORIENTÉS RÉGLAGE DU VÉLO, pas posture :
-nomme le composant à ajuster (hauteur de selle, avance/recul de selle,
-hauteur ou longueur de potence, cintre) + la direction + un ordre de
-grandeur en mm. Priorité selle (hauteur, avance-recul) pour knee et hip ;
-cockpit (potence, cintre) pour elbow et shoulder. Une phrase courte par
-conseil (max 15 mots), tutoiement. "high" = angle mesuré AU-DESSUS de la
-plage, "low" = en dessous.
+Chaque conseil ("advice") fait DEUX phrases, tutoiement, max 30 mots :
+1. le CONSTAT postural : ce qu'on observe sur le corps du cycliste et la
+   cause probable côté vélo (ex. « Jambe presque tendue en bas de
+   pédale — selle sans doute trop haute. ») ;
+2. l'ACTION de réglage : composant à ajuster (hauteur de selle,
+   avance/recul de selle, hauteur ou longueur de potence, cintre) +
+   direction + ordre de grandeur en mm, si utile proportionné à l'écart
+   (ex. « Abaisse-la d'environ 3 mm par degré d'écart. »).
+Priorité selle (hauteur, avance-recul) pour knee et hip ; cockpit
+(potence, cintre) pour elbow et shoulder. Adapte le ton et la prudence
+des réglages au profil (débutant = pas plus petits). "high" = angle
+mesuré AU-DESSUS de la plage, "low" = en dessous.
 
 RÉPONDS UNIQUEMENT avec un objet JSON, sans texte ni balises markdown,
 au format exact :

@@ -35,15 +35,33 @@ MODEL_NAME = "gemini-flash-latest"
 # personnalisés au setup (voir ranges.get_target_ranges).
 # Clé : (articulation, direction) où direction vaut "high" (au-dessus de la
 # plage) ou "low" (en dessous).
+# Chaque conseil = CONSTAT postural (ce qu'on voit sur le corps) PUIS
+# ACTION de réglage (quoi toucher sur le vélo, direction, ordre de
+# grandeur). Les deux ensemble : le constat seul laisse le cycliste
+# démuni, l'action seule semble sortir de nulle part.
 DIAGNOSTICS = {
-    ("knee", "high"): "Selle trop haute : abaisse-la de 3 mm par degré d'écart.",
-    ("knee", "low"): "Selle trop basse : remonte-la de 3 mm par degré d'écart.",
-    ("hip", "high"): "Hanche très ouverte : recule la selle de 5 mm ou allonge le cockpit.",
-    ("hip", "low"): "Hanche très fermée : avance la selle de 5 mm ou remonte le cintre.",
-    ("elbow", "high"): "Bras trop tendus : raccourcis la potence de 10 mm ou recule la selle.",
-    ("elbow", "low"): "Bras trop pliés : allonge la potence de 10 mm.",
-    ("shoulder", "high"): "Épaules très ouvertes : potence plus courte ou plus haute.",
-    ("shoulder", "low"): "Épaules fermées : abaisse le cintre ou allonge la potence.",
+    ("knee", "high"): ("Extension du genou trop grande, jambe presque tendue "
+                       "en bas de pédale — selle sans doute trop haute. "
+                       "Abaisse-la d'environ 3 mm par degré d'écart."),
+    ("knee", "low"): ("Genou trop fléchi au point mort bas — selle sans doute "
+                      "trop basse. Remonte-la d'environ 3 mm par degré d'écart."),
+    ("hip", "high"): ("Hanche très ouverte, buste redressé — position plus "
+                      "droite que la cible. Recule la selle de 5 mm ou "
+                      "allonge le cockpit."),
+    ("hip", "low"): ("Hanche très fermée, buste plongeant — position "
+                     "agressive, tension possible bas du dos. Avance la "
+                     "selle de 5 mm ou remonte le cintre."),
+    ("elbow", "high"): ("Bras quasi tendus, coudes verrouillés — cockpit "
+                        "probablement trop long. Raccourcis la potence de "
+                        "10 mm ou recule légèrement les mains."),
+    ("elbow", "low"): ("Bras très pliés — cockpit probablement trop court. "
+                       "Allonge la potence de 10 mm."),
+    ("shoulder", "high"): ("Épaules très ouvertes, grande allonge — le poste "
+                           "de pilotage est loin. Potence plus courte ou "
+                           "plus haute."),
+    ("shoulder", "low"): ("Épaules fermées, buste peu incliné — allonge "
+                          "insuffisante. Abaisse le cintre ou allonge la "
+                          "potence."),
 }
 
 

@@ -374,9 +374,11 @@ class AnalysisWindow(ctk.CTkToplevel):
             if refresh or name not in self._arc_texts:
                 angle = compute_angle(joints[pa], joints[vx], joints[pb])
                 rng = self._ranges[name]
+                # ASCII uniquement : les polices Hershey d'OpenCV ne
+                # connaissent pas « ° » (rendu « ? » sinon).
                 self._arc_texts[name] = (
-                    f"{angle:.0f}°",
-                    f"{rng.min_deg:.0f}-{rng.max_deg:.0f}°")
+                    f"{angle:.0f}",
+                    f"cible {rng.min_deg:.0f}-{rng.max_deg:.0f}")
             labels.append((name, pos, color))
 
         cv2.addWeighted(overlay, _ARC_ALPHA, frame, 1 - _ARC_ALPHA, 0, frame)
@@ -428,13 +430,19 @@ class AnalysisWindow(ctk.CTkToplevel):
     def _update_advice(self):
         findings = analyse_session(self._session, self._ranges,
                                    self._advice_map)
-        advices = [f["advice"] for f in findings if f["advice"]]
+        # Chaque conseil est ANCRÉ sur la mesure (articulation, valeur,
+        # écart signé) : une recommandation sans le chiffre qui la justifie
+        # semble sortir de nulle part.
+        problems = [f for f in findings if f["advice"]]
         if not findings:
             text = "Pédale normalement, j'observe ta position…"
-        elif not advices:
+        elif not problems:
             text = "Position dans les plages cibles. Continue comme ça."
         else:
-            text = "\n\n".join(f"— {a}" for a in advices)
+            text = "\n\n".join(
+                f"— {JOINT_LABELS[f['joint']]} {f['value']:.0f}° "
+                f"(écart {f['delta']:+.0f}°) : {f['advice']}"
+                for f in problems)
         self._advice.configure(text=text)
 
     # ------------------------------------------------------------------ #
