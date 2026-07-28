@@ -372,6 +372,14 @@
   font-size: 14px;
 }
 
+/* La mesure qui justifie le conseil porte la couleur d'état (rouge =
+   hors plage) ; le texte dit aussi « écart », jamais la couleur seule. */
+.advice-metric {
+  color: var(--red);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Accusé de réception : la carte s'allume quand le conseil change. */
 .advice-flash {
   animation: advice-in 600ms var(--ease-out);

@@ -4,7 +4,24 @@
    Display : Satoshi (Fontshare), repli SF Pro / Segoe UI Variable.
    ============================================================ */
 
-@import url('https://api.fontshare.com/v2/css?f[]=satoshi@700,500&display=swap');
+/* Satoshi auto-hébergée (licence ITF Free Font License, via Fontshare).
+   Pas d'@import CDN : render-blocking + dépendance réseau. `swap` : le
+   texte s'affiche en repli système puis Satoshi remplace sans page vide. */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('../fonts/Satoshi-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('../fonts/Satoshi-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 .landing {
   --l-bg: #101013;                /* zinc-950, jamais noir pur */
@@ -14,6 +31,11 @@
   --l-text: #fafafa;
   --l-text-2: #a1a1aa;
   --l-display: 'Satoshi', var(--font-display);
+
+  /* États sur fond sombre : composés pour le sombre, pas inversés
+     (les teintes desktop #2fa35c / #d05353 manquent de contraste ici). */
+  --l-green: #4cc47c;
+  --l-red: #e07070;
 
   background: var(--l-bg);
   color: var(--l-text);
@@ -211,6 +233,44 @@
   background-position: center;
   vertical-align: middle;
   filter: contrast(1.1);
+}
+
+/* Filet accent : le repère de marque du desktop, repris sous les titres. */
+.section-rule {
+  width: 48px;
+  height: 3px;
+  margin-top: 18px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+/* ---------- Chips d'angles en direct (moment focal) ---------- */
+
+.live-angles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.chip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;   /* les chiffres changent sans danser */
+}
+
+.chip--ok {
+  color: var(--l-green);
+  border: 1px solid rgb(76 196 124 / 0.35);
+  background: rgb(76 196 124 / 0.08);
+}
+
+.chip--ko {
+  color: var(--l-red);
+  border: 1px solid rgb(224 112 112 / 0.35);
+  background: rgb(224 112 112 / 0.08);
 }
 
 /* ---------- Bento 3x2, dense, zéro trou ---------- */

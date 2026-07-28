@@ -9,7 +9,7 @@
  *  - images du bento : scale 0.92 -> 1 à l'entrée (profondeur d'arrivée).
  * Tout est coupé sous prefers-reduced-motion.
  */
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -64,6 +64,31 @@ const STEPS = [
     body: 'Hauteur et recul de selle, potence, cintre : chaque écart se traduit en réglage concret, en millimètres, priorisé selle d\'abord.',
   },
 ];
+
+/**
+ * Chips d'angles « en direct » de la carte Angles articulaires : le moment
+ * focal de la page. La promesse du hero (« mesurée en direct ») est montrée,
+ * pas affirmée. Vert = dans la plage, rouge = hors plage, avec le libellé
+ * en toutes lettres (l'information ne repose jamais sur la couleur seule).
+ * Sous prefers-reduced-motion : valeurs figées.
+ */
+function LiveAngles({ frozen }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (frozen) return;
+    const id = setInterval(() => setTick((t) => t + 1), 900);
+    return () => clearInterval(id);
+  }, [frozen]);
+
+  const knee = 145 + Math.round(2.5 * Math.sin(tick * 1.3));   // 143-148
+  const elbow = 167 + Math.round(Math.sin(tick * 0.9));        // 166-168
+  return (
+    <div className="live-angles" aria-hidden="true">
+      <span className="chip chip--ok">Genou {knee}° · dans la plage</span>
+      <span className="chip chip--ko">Coude {elbow}° · trop tendu</span>
+    </div>
+  );
+}
 
 const MARQUEE_WORDS = [
   'Genou 140-150°', 'Hanche 45-60°', 'Coude 150-165°', 'Épaule 85-100°',
@@ -171,6 +196,7 @@ export default function LandingView({ onStart }) {
           />
           outil d'atelier, pas un labo.
         </h2>
+        <div className="section-rule" />
         <div className="bento">
           {BENTO.map((c) => (
             <article key={c.id} className={`bento-cell ${c.className}`}>
@@ -184,6 +210,7 @@ export default function LandingView({ onStart }) {
                 />
               )}
               <div className="bento-copy">
+                {c.id === 'angles' && <LiveAngles frozen={reduce} />}
                 <h3>{c.title}</h3>
                 <p>{c.body}</p>
               </div>
@@ -200,6 +227,7 @@ export default function LandingView({ onStart }) {
             <br />
             un diagnostic.
           </h2>
+          <div className="section-rule" />
           <p className="method-note">
             Complément du bike fitting complet, pas concurrent : un outil
             d'orientation pour le technicien.

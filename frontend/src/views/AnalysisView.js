@@ -144,8 +144,11 @@ export default function AnalysisView({ onFinish }) {
           ) : (
             problems.map((f) => (
               <p key={f.joint} className="advice-text">
-                {JOINT_LABELS[f.joint]} {f.value.toFixed(0)}° (écart{' '}
-                {f.delta > 0 ? '+' : ''}{f.delta.toFixed(0)}°) : {f.advice}
+                <span className="advice-metric">
+                  {JOINT_LABELS[f.joint]} {f.value.toFixed(0)}° (écart{' '}
+                  {f.delta > 0 ? '+' : ''}{f.delta.toFixed(0)}°)
+                </span>{' '}
+                : {f.advice}
               </p>
             ))
           )}
