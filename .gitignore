@@ -4,7 +4,6 @@ __pycache__/
 venv/
 .vscode/
 draft/
-config/
 graphify-out/
 .impeccable/
 DESIGN.md
