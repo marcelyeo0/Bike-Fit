@@ -8,3 +8,6 @@ graphify-out/
 .impeccable/
 DESIGN.md
 PRODUCT.md
+build/
+dist/
+*.spec

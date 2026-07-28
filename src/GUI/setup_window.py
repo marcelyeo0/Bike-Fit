@@ -29,7 +29,7 @@ import customtkinter as ctk
 
 from src.core.ranges import get_target_ranges
 from src.GUI import theme
-from src.GUI.anim import fade_in
+from src.GUI.anim import fade_in, smooth_hover
 
 
 class SetupWindow(ctk.CTk):
@@ -37,6 +37,10 @@ class SetupWindow(ctk.CTk):
 
     def __init__(self, on_profile_ready):
         super().__init__(fg_color=theme.BG)
+        # Résout les piles de polices sur ce qui est réellement installé
+        # (SF Pro → Segoe UI Variable → Segoe UI). Première fenêtre = bon
+        # moment : tout widget construit ensuite hérite du résultat.
+        theme.init_fonts(self)
         self._on_profile_ready = on_profile_ready
 
         self.title("BikeFit")
@@ -149,10 +153,11 @@ class SetupWindow(ctk.CTk):
         self._button = ctk.CTkButton(
             form, text="Calculer mes plages d'angles",
             font=theme.FONT_BUTTON,
-            corner_radius=theme.RADIUS, height=theme.BTN_HEIGHT,
-            fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER,
+            corner_radius=theme.BTN_RADIUS, height=theme.BTN_HEIGHT,
+            fg_color=theme.BTN_DARK, hover_color=theme.BTN_DARK_HOVER,
             command=self._submit)
         self._button.pack(fill="x", pady=(22, 6))
+        smooth_hover(self._button, theme.BTN_DARK, theme.BTN_DARK_HOVER)
 
         self._status = ctk.CTkLabel(form, text="", font=theme.FONT_SMALL,
                                     text_color=theme.TEXT_2, anchor="w")
@@ -168,11 +173,16 @@ class SetupWindow(ctk.CTk):
         ctk.CTkLabel(cell, text=label, font=theme.FONT_SECTION,
                      text_color=theme.TEXT_2, anchor="w"
                      ).pack(fill="x", pady=(0, 4))
+        # Style « segmented control » iOS : piste grise, segment sélectionné
+        # BLANC en pilule — le texte sombre reste lisible sur tous les états
+        # (CTkSegmentedButton n'a qu'une seule couleur de texte : une
+        # sélection sombre le rendrait illisible).
         seg = ctk.CTkSegmentedButton(
             cell, values=values, font=theme.FONT_BODY,
-            corner_radius=10, height=36,
-            selected_color=theme.ACCENT, selected_hover_color=theme.ACCENT_HOVER,
-            unselected_color=theme.CARD, unselected_hover_color=theme.SEPARATOR,
+            corner_radius=18, height=36,
+            selected_color=theme.CARD, selected_hover_color=theme.CARD,
+            unselected_color=theme.SEPARATOR,
+            unselected_hover_color="#EBEBEF",
             fg_color=theme.SEPARATOR, text_color=theme.TEXT)
         seg.set(default)
         seg.pack(fill="x")

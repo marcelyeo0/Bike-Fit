@@ -15,11 +15,32 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
+import sys
+
 import customtkinter as ctk
 
 from src.GUI import SetupWindow, AnalysisWindow
 
-MODEL_PATH = "config/pose_landmarker.task"
+
+def resource_path(relative: str) -> str:
+    """Chemin absolu vers une ressource, valable dans les trois modes de
+    lancement :
+      - PyInstaller --onefile : les données sont extraites dans un dossier
+        temporaire exposé par sys._MEIPASS ;
+      - PyInstaller --onedir  : sys._MEIPASS pointe vers _internal/ à côté
+        de l'exécutable (PyInstaller ≥ 6) ;
+      - python main.py        : dossier de ce fichier (la racine du projet),
+        donc plus de dépendance au répertoire courant."""
+    base = getattr(sys, "_MEIPASS", None)
+    if base is None:
+        if getattr(sys, "frozen", False):
+            base = os.path.dirname(sys.executable)
+        else:
+            base = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base, relative)
+
+
+MODEL_PATH = resource_path(os.path.join("config", "pose_landmarker.task"))
 
 
 def main():

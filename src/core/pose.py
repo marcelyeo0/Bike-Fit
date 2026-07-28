@@ -9,7 +9,7 @@ le flux vidéo — MediaPipe saute des frames tout seul si besoin.
 
 Le wrapper cache tout ça. Utilisation depuis l'extérieur :
 
-    detector = PoseDetector("asset/pose_landmarker.task")
+    detector = PoseDetector("config/pose_landmarker.task")
     ...dans la boucle vidéo :
     detector.send(frame, timestamp_ms)      # envoie la frame (ne bloque pas)
     joints = detector.latest(frame.shape)   # dernier résultat dispo (ou None)

@@ -38,7 +38,8 @@ from src.core.angles import (SessionAngles, JUDGE_STAT, JOINT_ANGLES,
                              compute_angle)
 from src.core.feedback import analyse_session, get_ai_feedback, JOINT_LABELS
 from src.GUI import theme
-from src.GUI.anim import fade_in, fade_out, WaitingDots
+from src.GUI.anim import (fade_in, fade_out, WaitingDots,
+                          tween_color, smooth_hover, flash)
 
 
 # Couleurs OpenCV (BGR !) dérivées du thème : une seule source de vérité.
@@ -87,16 +88,23 @@ class _JointRow(ctk.CTkFrame):
         self._dot = ctk.CTkLabel(right, text="●", font=(theme.FAMILY, 13),
                                  text_color=theme.GRAY, width=18)
         self._dot.pack(side="left", padx=(6, 0))
+        self._color = theme.GRAY     # couleur courante (base des tweens)
 
     def update_row(self, value, state):
-        """value : angle jugé (ou None) ; state : état STABILISÉ True/False/None."""
+        """value : angle jugé (ou None) ; state : état STABILISÉ True/False/None.
+        Le changement d'état est LE moment porteur de sens du produit : la
+        couleur GLISSE (vert↔rouge, ~250 ms) au lieu de claquer — l'œil du
+        vélociste capte la bascule sans être agressé."""
         if value is None or state is None:
-            self._value.configure(text="—", text_color=theme.GRAY)
-            self._dot.configure(text_color=theme.GRAY)
-            return
-        color = theme.GREEN if state else theme.RED
-        self._value.configure(text=f"{value:.0f}°", text_color=color)
-        self._dot.configure(text_color=color)
+            color = theme.GRAY
+            self._value.configure(text="—")
+        else:
+            color = theme.GREEN if state else theme.RED
+            self._value.configure(text=f"{value:.0f}°")
+        if color != self._color:
+            tween_color(self._value, "text_color", self._color, color, 250)
+            tween_color(self._dot, "text_color", self._color, color, 250)
+            self._color = color
 
 
 class AnalysisWindow(ctk.CTkToplevel):
@@ -179,8 +187,12 @@ class AnalysisWindow(ctk.CTkToplevel):
         panel.grid_propagate(False)
 
         # Carte unique des articulations : rangées + filets de séparation.
+        # Élévation par liseré 1 px (pas d'ombre en tkinter) : cartes
+        # blanches détourées sur le fond zinc, comme la référence.
         stats_card = ctk.CTkFrame(panel, fg_color=theme.CARD,
-                                  corner_radius=theme.RADIUS)
+                                  corner_radius=theme.RADIUS,
+                                  border_width=1,
+                                  border_color=theme.SEPARATOR)
         stats_card.pack(fill="x", pady=(0, 10))
         ctk.CTkLabel(stats_card, text="ARTICULATIONS",
                      font=theme.FONT_SECTION, text_color=theme.TEXT_2,
@@ -205,8 +217,11 @@ class AnalysisWindow(ctk.CTkToplevel):
                      height=4).pack()    # respiration basse de la carte
 
         # Conseils en direct (DIAGNOSTICS des angles hors plage).
-        advice_card = ctk.CTkFrame(panel, fg_color=theme.CARD,
-                                   corner_radius=theme.RADIUS)
+        self._advice_card = ctk.CTkFrame(panel, fg_color=theme.CARD,
+                                         corner_radius=theme.RADIUS,
+                                         border_width=1,
+                                         border_color=theme.SEPARATOR)
+        advice_card = self._advice_card
         advice_card.pack(fill="both", expand=True, pady=(0, 10))
         ctk.CTkLabel(advice_card, text="CONSEILS EN DIRECT",
                      font=theme.FONT_SECTION, text_color=theme.TEXT_2,
@@ -222,10 +237,11 @@ class AnalysisWindow(ctk.CTkToplevel):
         self._finish_btn = ctk.CTkButton(
             panel, text="Terminer la session",
             font=theme.FONT_BUTTON,
-            corner_radius=theme.RADIUS, height=theme.BTN_HEIGHT,
+            corner_radius=theme.BTN_RADIUS, height=theme.BTN_HEIGHT,
             fg_color=theme.RED, hover_color=theme.RED_HOVER,
             command=self._finish)
         self._finish_btn.pack(fill="x")
+        smooth_hover(self._finish_btn, theme.RED, theme.RED_HOVER)
 
     def _show_camera_error(self):
         """Webcam introuvable : état d'erreur explicite, pas de fenêtre morte.
@@ -237,9 +253,11 @@ class AnalysisWindow(ctk.CTkToplevel):
             font=theme.FONT_BODY, justify="center")
         self._advice.configure(text="Analyse impossible sans caméra.")
         self._finish_btn.configure(text="Retour au questionnaire",
-                                   fg_color=theme.ACCENT,
-                                   hover_color=theme.ACCENT_HOVER,
+                                   fg_color=theme.BTN_DARK,
+                                   hover_color=theme.BTN_DARK_HOVER,
                                    command=self._close)
+        # Le bouton a changé de teintes : on rebinde le hover animé dessus.
+        smooth_hover(self._finish_btn, theme.BTN_DARK, theme.BTN_DARK_HOVER)
 
     def _show_camera_lost(self):
         """Caméra perdue EN COURS de session : une image figée sans un mot
@@ -443,7 +461,12 @@ class AnalysisWindow(ctk.CTkToplevel):
                 f"— {JOINT_LABELS[f['joint']]} {f['value']:.0f}° "
                 f"(écart {f['delta']:+.0f}°) : {f['advice']}"
                 for f in problems)
-        self._advice.configure(text=text)
+        # Accusé de réception visuel : quand le CONTENU du conseil change,
+        # la carte s'allume légèrement puis s'éteint (~600 ms). L'opérateur
+        # regarde surtout la vidéo — ce signal ramène l'œil au bon moment.
+        if text != self._advice.cget("text"):
+            self._advice.configure(text=text)
+            flash(self._advice_card, "fg_color", "#E3EDFB", theme.CARD)
 
     # ------------------------------------------------------------------ #
     # Fin de session : bilan IA
@@ -496,7 +519,8 @@ class AnalysisWindow(ctk.CTkToplevel):
                      text_color=theme.TEXT, anchor="w").pack(fill="x", pady=(6, 14))
 
         card = ctk.CTkFrame(wrapper, fg_color=theme.CARD,
-                            corner_radius=theme.RADIUS)
+                            corner_radius=theme.RADIUS,
+                            border_width=1, border_color=theme.SEPARATOR)
         card.pack(fill="both", expand=True)
 
         # Attente : ellipse animée tant que Gemini n'a pas répondu.
@@ -523,11 +547,13 @@ class AnalysisWindow(ctk.CTkToplevel):
                      anchor="w", justify="left"
                      ).pack(fill="x", pady=(8, 0))
 
-        ctk.CTkButton(wrapper, text="Fermer",
-                      font=theme.FONT_BUTTON,
-                      corner_radius=theme.RADIUS, height=theme.BTN_HEIGHT,
-                      fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER,
-                      command=self._close).pack(fill="x", pady=(12, 0))
+        close_btn = ctk.CTkButton(
+            wrapper, text="Fermer", font=theme.FONT_BUTTON,
+            corner_radius=theme.BTN_RADIUS, height=theme.BTN_HEIGHT,
+            fg_color=theme.BTN_DARK, hover_color=theme.BTN_DARK_HOVER,
+            command=self._close)
+        close_btn.pack(fill="x", pady=(12, 0))
+        smooth_hover(close_btn, theme.BTN_DARK, theme.BTN_DARK_HOVER)
 
     def _report_ready(self, report: str):
         if not self.winfo_exists():
