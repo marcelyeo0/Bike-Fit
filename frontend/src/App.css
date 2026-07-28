@@ -1,0 +1,484 @@
+/* ============================================================
+   BikeFit web — styles des trois vues. Motion : règles Emil
+   (propriétés explicites, ease-out marqué, < 300 ms, scale 0.97
+   au press, jamais de scale(0), sortie plus rapide qu'entrée).
+   ============================================================ */
+
+.app {
+  min-height: 100dvh;
+}
+
+/* ---------- Entrée de vue : fondu + légère montée ---------- */
+
+.view-enter {
+  animation: view-in 240ms var(--ease-out) both;
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Cascade d'apparition du formulaire (une seule fois, 40 ms/élément). */
+.stagger {
+  animation: view-in 260ms var(--ease-out) both;
+  animation-delay: calc(var(--i) * 40ms);
+}
+
+/* ---------- Boutons pilule (langage du desktop) ---------- */
+
+.btn {
+  width: 100%;
+  height: 48px;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-out),
+              transform 120ms var(--ease-out);
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn--dark {
+  background: var(--btn-dark);
+  color: var(--text-on-dark);
+}
+
+.btn--dark:hover {
+  background: var(--btn-dark-hover);
+}
+
+.btn--red {
+  background: var(--red);
+  color: var(--text-on-dark);
+}
+
+.btn--red:hover {
+  background: var(--red-hover);
+}
+
+/* ---------- Cartes : élévation par liseré 1 px ---------- */
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.card-heading {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+/* ============================================================
+   Vue 1 — Questionnaire (split-screen marque / formulaire)
+   ============================================================ */
+
+.setup {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  min-height: 100dvh;
+}
+
+.brand {
+  background: var(--bg-dark);
+  display: flex;
+  align-items: flex-end;          /* marque ancrée en bas, comme le desktop */
+}
+
+.brand-block {
+  padding: 48px 44px;
+}
+
+.brand-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-on-dark);
+}
+
+.brand-tag {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--text-2-on-dark);
+}
+
+.brand-rule {
+  width: 48px;
+  height: 3px;
+  margin-top: 18px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.form {
+  max-width: 640px;
+  padding: 48px 44px;
+}
+
+.form-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.form-sub {
+  margin: 4px 0 20px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 24px;
+}
+
+.field {
+  margin-top: 14px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.field-help {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+/* Segmented control iOS : piste grise, segment sélectionné blanc */
+
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--separator);
+}
+
+.segment {
+  flex: 1;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-out),
+              box-shadow 150ms var(--ease-out),
+              transform 120ms var(--ease-out);
+}
+
+.segment:hover {
+  background: #ebebef;
+}
+
+.segment:active {
+  transform: scale(0.97);
+}
+
+.segment--on {
+  background: var(--card);
+  box-shadow: 0 1px 3px rgb(24 24 27 / 0.12);
+  font-weight: 600;
+}
+
+.segment--on:hover {
+  background: var(--card);
+}
+
+.remarks {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--separator);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+  font-family: var(--font-text);
+  font-size: 14px;
+  resize: vertical;
+  transition: border-color 150ms var(--ease-out);
+}
+
+.remarks:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.setup .btn {
+  margin-top: 24px;
+}
+
+/* ============================================================
+   Vue 2 — Analyse (vidéo / panneau)
+   ============================================================ */
+
+.analysis {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  min-height: 100dvh;
+  padding: 16px;
+}
+
+.video-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-dark);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: scaleX(-1);           /* effet miroir, comme le desktop */
+}
+
+.video-fallback {
+  color: var(--text-2-on-dark);
+  text-align: center;
+}
+
+.demo-note {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  margin: 0;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: rgb(24 24 27 / 0.72);
+  color: var(--text-2-on-dark);
+  font-size: 11.5px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.joints {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.joint-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 0;
+}
+
+.joint-row + .joint-row {
+  border-top: 1px solid var(--separator);
+}
+
+.joint-name {
+  display: block;
+  font-size: 14px;
+}
+
+.joint-target {
+  display: block;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.joint-value-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.joint-value {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  /* La bascule d'état est LE moment de sens : la couleur glisse. */
+  transition: color 250ms var(--ease-out);
+}
+
+.joint-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  transition: background-color 250ms var(--ease-out);
+}
+
+.joint-value--wait { color: var(--gray); }
+.joint-value--ok   { color: var(--green); }
+.joint-value--ko   { color: var(--red); }
+.joint-dot--wait   { background: var(--gray); }
+.joint-dot--ok     { background: var(--green); }
+.joint-dot--ko     { background: var(--red); }
+
+.card--advice {
+  flex: 1;
+}
+
+.advice-text {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+/* Accusé de réception : la carte s'allume quand le conseil change. */
+.advice-flash {
+  animation: advice-in 600ms var(--ease-out);
+}
+
+@keyframes advice-in {
+  from { background-color: #e3edfb; }
+  to   { background-color: var(--card); }
+}
+
+/* ============================================================
+   Vue 3 — Bilan
+   ============================================================ */
+
+.report {
+  display: flex;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 40px 24px;
+}
+
+.report-inner {
+  width: 100%;
+  max-width: 720px;
+}
+
+.report-title {
+  margin: 0 0 14px;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.report-card {
+  padding: 18px 20px;
+}
+
+.report-note {
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+.report-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.report-row {
+  display: flex;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.report-row + .report-row {
+  border-top: 1px solid var(--separator);
+}
+
+.report-state {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin-top: 6px;
+  border-radius: 50%;
+}
+
+.report-state--ok { background: var(--green); }
+.report-state--ko { background: var(--red); }
+
+.report-line {
+  margin: 0;
+  font-weight: 600;
+}
+
+.report-advice {
+  margin: 3px 0 0;
+  color: var(--text-2);
+}
+
+.legal {
+  margin: 10px 0 14px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+/* ============================================================
+   Responsive : les grilles s'empilent sous 768 px
+   ============================================================ */
+
+@media (max-width: 768px) {
+  .setup {
+    grid-template-columns: 1fr;
+  }
+  .brand {
+    align-items: flex-start;
+  }
+  .brand-block {
+    padding: 28px 24px;
+  }
+  .form {
+    padding: 28px 24px;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .analysis {
+    grid-template-columns: 1fr;
+  }
+  .video-card {
+    min-height: 44dvh;
+  }
+}
+
+/* ---------- Motion réduite : on garde les fondus, on coupe le reste --- */
+
+@media (prefers-reduced-motion: reduce) {
+  .view-enter,
+  .stagger {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+  .btn:active,
+  .segment:active {
+    transform: none;
+  }
+}
