@@ -1,0 +1,15 @@
+.env
+__pycache__/
+*.pyc
+venv/
+.vscode/
+draft/
+graphify-out/
+.impeccable/
+DESIGN.md
+PRODUCT.md
+build/
+dist/
+*.spec
+node_modules/
+npm-debug.log*

@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Le design system BikeFit est pense en theme clair (theme.py :
+       ctk.set_appearance_mode("light")). La page verrouille donc le clair,
+       les zones sombres sont des PANNEAUX de marque, pas un theme sombre. */
+    color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-bg font-sans text-ink antialiased;
+  }
+
+  /* Focus visible en Bleu Cadre : l'accent unique sert aussi a la navigation
+     clavier, jamais une couleur de plus. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-bg;
+  }
+
+  ::selection {
+    background-color: #3572d6;
+    color: #ffffff;
+  }
+}
+
+@layer components {
+  /* Etat initial des blocs reveles au scroll. Pose en CSS (et non en JS)
+     pour eviter le flash de contenu deja visible avant l'init de GSAP. */
+  .js [data-reveal] {
+    opacity: 0;
+  }
+}
+
+/* Mouvement reduit : la page se lit d'un bloc, sans aucune transition.
+   Les ScrollTrigger sont desactives cote JS (voir src/ui/anim.js). */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .js [data-reveal] {
+    opacity: 1;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
