@@ -11,3 +11,10 @@ PRODUCT.md
 build/
 dist/
 *.spec
+
+node_modules/
+npm-debug.log*
+
+# archives et sources de design (hors versionnement)
+*.zip
+web design/
