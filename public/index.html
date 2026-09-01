@@ -1,25 +1,25 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#18181B" />
+    <meta name="theme-color" content="#ffffff" />
     <meta
       name="description"
-      content="BikeFit mesure les angles articulaires d'un cycliste sur home-trainer avec une simple webcam, et traduit chaque écart en réglage de vélo chiffré."
+      content="Axio, l'analyse de posture cycliste pour les ateliers velo. Filmez, analysez, remettez un rapport a votre marque."
     />
-    <title>BikeFit, analyse posturale cycliste en temps réel</title>
-    <script>
-      // Ajoute le marqueur AVANT le premier rendu : les blocs a reveler ne
-      // sont masques que si le JS tourne. Sans JS, la page reste lisible.
-      document.documentElement.classList.add("js");
-    </script>
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="preload" as="image" href="%PUBLIC_URL%/assets/hero-cyclist.png" />
+    <title>Axio - Analyse de posture cycliste pour les ateliers</title>
   </head>
   <body>
-    <noscript>
-      BikeFit : analyse posturale cycliste en temps réel. Activez JavaScript
-      pour les animations, le contenu reste lisible sans elles.
-    </noscript>
+    <noscript>Ce site necessite JavaScript pour fonctionner.</noscript>
     <div id="root"></div>
   </body>
 </html>

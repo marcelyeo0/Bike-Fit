@@ -13,3 +13,10 @@ dist/
 *.spec
 node_modules/
 npm-debug.log*
+
+# modeles mediapipe (binaires lourds, telecharges hors git)
+config/*.task
+
+# archives et sources de design
+*.zip
+web design/

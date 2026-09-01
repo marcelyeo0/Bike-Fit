@@ -1,38 +1,81 @@
-# BikeFit, site vitrine
+# Axio, site vitrine
 
-Site de présentation du logiciel BikeFit (analyse posturale cycliste en temps
-réel). Branche `web` : ici vit uniquement le site, l'application Python reste
-sur `main`.
+Landing page d'Axio, le logiciel d'analyse de posture cycliste destiné aux
+ateliers vélo. Branche `web` : ici vit uniquement le site, l'application Python
+reste sur `main`.
+
+Le site reproduit le canvas de référence `web design/Axio.dc.html` pour la
+navigation, le hero et la barre de preuve. À partir de la section
+« Comment ça marche », la mise en page a été retravaillée : les maquettes en
+`<div>` du canvas (fausse caméra, faux rapport, faux graphiques) sont remplacées
+par des photographies, et les pictogrammes viennent d'une seule famille
+d'icônes.
 
 ## Lancer
 
 ```bash
-npm install     # dépendances (React, GSAP, Tailwind)
+npm install     # dépendances (React, GSAP, Tailwind, Phosphor)
 npm start       # serveur de développement
-npm test        # banc d'essai du cœur, sans interface
 npm run build   # build de production dans build/
 ```
 
 ## Structure
 
-Le site reprend volontairement le découpage de l'application desktop
-(branche `main`), fichier pour fichier :
+```
+public/
+  index.html          polices Google, préchargement du visuel de hero
+  assets/             visuels du canvas + photos générées
+src/
+  index.js            point d'entrée
+  index.css           base Tailwind, type fantôme, état initial des révélations
+  App.jsx             assemblage des sections, branchement des deux hooks motion
+  lib/
+    useReveal.js      révélation au scroll (IntersectionObserver)
+    useParallax.js    parallaxe douce (GSAP ScrollTrigger)
+  ui/
+    Nav.jsx           navigation collante, menu mobile
+    Footer.jsx
+    components/
+      Bouton.jsx      variantes de boutons, contrastes calés AA
+    sections/
+      Hero.jsx            type fantôme, cailloux flottants, relevés d'angles
+      Preuve.jsx          compteur d'ateliers, monogrammes d'enseignes
+      Comment.jsx         trois étapes, une photo par étape
+      Fonctionnalites.jsx bento cinq cellules, photo annotée
+      Livrable.jsx        rapport imprimé
+      Tarifs.jsx          trois formules
+      Temoignage.jsx      citation client
+      Ressources.jsx      matériel requis + questions fréquentes
+      Cta.jsx             bloc sombre de fin de page
+```
 
-| Application (`main`)    | Site (`web`)                  |
-| ----------------------- | ----------------------------- |
-| `main.py`               | `src/index.js` + `src/App.jsx` |
-| `src/core/angles.py`    | `src/core/angles.js`          |
-| `src/core/ranges.py`    | `src/core/ranges.js`          |
-| `src/core/feedback.py`  | `src/core/feedback.js`        |
-| `src/GUI/theme.py`      | `src/ui/theme.js` + `tailwind.config.js` |
-| `src/GUI/anim.py`       | `src/ui/anim.js`              |
-| `src/GUI/*_window.py`   | `src/ui/sections/*.jsx`       |
-| `test_core.py`          | `src/core/core.test.js`       |
+## Direction artistique
 
-Le design system est celui de l'application : gamme zinc, un seul accent
-(Bleu Cadre `#3572D6`), vert et rouge réservés à l'état des articulations,
-valeurs numériques en chasse fixe. Thème clair verrouillé, comme le logiciel.
+- Palette : blanc, encre `#0C0C0C`, un seul accent rouge décliné en trois
+  valeurs (`rouge` pour les aplats, `rouge-cta` pour les boutons, `rouge-texte`
+  pour le petit texte) afin de tenir le contraste AA partout.
+- Typographie : Archivo Black en titrage, Barlow en courant, Barlow Semi
+  Condensed pour les intertitres.
+- Rayons : `24px` pour les blocs, `20px` pour les médias, pill pour tout ce qui
+  est cliquable.
+- Page en thème clair uniquement. Le hero repose sur un PNG en
+  `mix-blend-multiply` qui suppose un fond clair ; un mode sombre casserait le
+  visuel principal.
 
-Les chiffres affichés (plages cibles, conseils de réglage) sont ceux du code
-de `main` : plages standard de repli et diagnostics de `src/core/feedback.py`.
-Les valeurs qui bougent sont des démonstrations, signalées comme telles.
+## Motion
+
+Deux mécanismes seulement, tous deux désactivés sous
+`prefers-reduced-motion: reduce` :
+
+- révélation à l'entrée dans le viewport, via `IntersectionObserver` ;
+- parallaxe sur les cailloux et les photos, via `GSAP ScrollTrigger`.
+
+Aucun `window.addEventListener('scroll')`, aucune valeur continue stockée dans
+un état React.
+
+## Images
+
+Les visuels du hero (`hero-cyclist.png`, `rock-*.png`, `portrait.png`)
+proviennent du canvas de référence. Les cinq photographies des sections
+suivantes (`etape-*.jpg`, `feature-pose.jpg`, `livrable-rapport.jpg`) ont été
+générées avec Pixelcut (modèle `z-image-turbo`).

@@ -1,40 +1,39 @@
-/**
- * App.jsx — l'assemblage de la page, dans l'ordre du logiciel.
- *
- * Miroir web de `main.py` : le point d'entrée ne fait rien d'autre
- * qu'enchaîner les écrans. Les apparitions au scroll sont initialisées une
- * seule fois ici, pour toute la page (voir ui/anim.js).
- */
-
-import { useEffect, useRef } from "react";
-
-import { initReveals } from "./ui/anim";
-import Nav from "./ui/sections/Nav";
-import Hero from "./ui/sections/Hero";
-import Analyse from "./ui/sections/Analyse";
-import Flux from "./ui/sections/Flux";
-import Conseils from "./ui/sections/Conseils";
-import Limites from "./ui/sections/Limites";
-import Logiciel from "./ui/sections/Logiciel";
-import Fin from "./ui/sections/Fin";
+import React, { useRef } from 'react';
+import { useReveal } from './lib/useReveal';
+import { useParallax } from './lib/useParallax';
+import Nav from './ui/Nav';
+import Hero from './ui/sections/Hero';
+import Preuve from './ui/sections/Preuve';
+import Comment from './ui/sections/Comment';
+import Fonctionnalites from './ui/sections/Fonctionnalites';
+import Livrable from './ui/sections/Livrable';
+import Tarifs from './ui/sections/Tarifs';
+import Temoignage from './ui/sections/Temoignage';
+import Ressources from './ui/sections/Ressources';
+import Cta from './ui/sections/Cta';
+import Footer from './ui/Footer';
 
 export default function App() {
-  const rootRef = useRef(null);
+  const page = useRef(null);
 
-  useEffect(() => initReveals(rootRef.current), []);
+  useReveal(page);
+  useParallax(page);
 
   return (
-    <div ref={rootRef}>
+    <div ref={page} className="w-full overflow-x-hidden bg-white">
       <Nav />
       <main>
         <Hero />
-        <Analyse />
-        <Flux />
-        <Conseils />
-        <Limites />
-        <Logiciel />
+        <Preuve />
+        <Comment />
+        <Fonctionnalites />
+        <Livrable />
+        <Tarifs />
+        <Temoignage />
+        <Ressources />
+        <Cta />
       </main>
-      <Fin />
+      <Footer />
     </div>
   );
 }
