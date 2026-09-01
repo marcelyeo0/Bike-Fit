@@ -34,8 +34,10 @@ export const config = {
   matcher: [
     // Tout sauf les fichiers internes Next et les fichiers statiques, sauf si
     // on les retrouve dans les parametres de recherche.
-    '/((?!_next|[^?]*\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     // Toujours passer sur les routes d'API.
     '/(api|trpc)(.*)',
+    // Chemin d'auto-proxy de Clerk.
+    '/__clerk/:path*',
   ],
 };

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { List, X } from '@phosphor-icons/react';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth, UserButton } from '@clerk/nextjs';
 import Bouton from './components/Bouton';
 
 const LIENS = [
@@ -19,9 +20,6 @@ export default function Nav() {
   // Tant que Clerk n'a pas resolu la session, on garde l'etat visiteur : c'est
   // ce que rend le serveur, donc pas de decalage d'hydratation.
   const connecte = isLoaded && isSignedIn;
-  const cta = connecte
-    ? { href: '/dashboard', label: 'Accéder au dashboard' }
-    : { href: '/sign-up', label: 'Commencer' };
 
   return (
     <nav className="sticky top-0 z-50 border-b border-ligne bg-white/[.92] backdrop-blur-[10px]">
@@ -46,9 +44,28 @@ export default function Nav() {
           <Bouton href="#contact" variante="contour" taille="sm" className="hidden lg:inline-flex">
             Réserver une démo
           </Bouton>
-          <Bouton href={cta.href} taille="sm" className="shadow-rouge-sm">
-            {cta.label}
-          </Bouton>
+
+          {connecte ? (
+            <>
+              <Bouton href="/dashboard" taille="sm" className="shadow-rouge-sm">
+                Accéder au dashboard
+              </Bouton>
+              <UserButton />
+            </>
+          ) : (
+            <>
+              <Link
+                href="/sign-in"
+                className="hidden text-[14.5px] font-medium text-texte transition-colors hover:text-encre lg:inline"
+              >
+                Se connecter
+              </Link>
+              <Bouton href="/sign-up" taille="sm" className="shadow-rouge-sm">
+                Commencer
+              </Bouton>
+            </>
+          )}
+
           <button
             type="button"
             aria-label={ouvert ? 'Fermer le menu' : 'Ouvrir le menu'}
@@ -81,6 +98,15 @@ export default function Nav() {
             >
               Réserver une démo
             </a>
+            {!connecte && (
+              <Link
+                href="/sign-in"
+                onClick={() => setOuvert(false)}
+                className="py-3 text-[16.5px] font-medium text-texte transition-colors hover:text-encre"
+              >
+                Se connecter
+              </Link>
+            )}
           </div>
         </div>
       )}
