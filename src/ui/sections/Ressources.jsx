@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { DeviceMobileCamera, VideoCamera, Bicycle, Browser, Plus, Minus } from '@phosphor-icons/react';
 

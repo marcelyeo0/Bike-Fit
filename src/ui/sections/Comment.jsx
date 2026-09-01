@@ -58,7 +58,7 @@ export default function Comment() {
           >
             <div className="aspect-[4/3] overflow-hidden rounded-media border border-ligne bg-fond-doux">
               <img
-                src={`${process.env.PUBLIC_URL}/assets/${etape.image}`}
+                src={`/assets/${etape.image}`}
                 alt={etape.alt}
                 width="1024"
                 height="768"

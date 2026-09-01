@@ -15,7 +15,7 @@ export default function Temoignage() {
         </blockquote>
         <figcaption className="flex items-center justify-center gap-4">
           <img
-            src={`${process.env.PUBLIC_URL}/assets/portrait.png`}
+            src="/assets/portrait.png"
             alt="Julien Marchand"
             width="64"
             height="64"

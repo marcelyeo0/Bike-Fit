@@ -79,7 +79,7 @@ export default function Fonctionnalites() {
 
           <div className="relative overflow-hidden rounded-media bg-[#F2F2F1]">
             <img
-              src={`${process.env.PUBLIC_URL}/assets/feature-pose.jpg`}
+              src="/assets/feature-pose.jpg"
               alt="Cycliste de profil sur home-trainer, articulations relevées par l'analyse"
               width="1024"
               height="576"

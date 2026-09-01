@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 const BASE =
   'inline-flex items-center justify-center whitespace-nowrap rounded-full font-semibold ' +
@@ -30,12 +31,21 @@ export default function Bouton({
   children,
   ...reste
 }) {
+  const classes = `${BASE} ${TAILLES[taille]} ${VARIANTES[variante]} ${className}`;
+
+  // Les ancres (#contact, #tarifs...) restent de simples <a> : next/link n'a
+  // rien a precharger et casserait le scroll fluide. Les vraies routes
+  // (/sign-up, /dashboard) passent par Link pour une navigation client.
+  if (href.startsWith('/')) {
+    return (
+      <Link href={href} className={classes} {...reste}>
+        {children}
+      </Link>
+    );
+  }
+
   return (
-    <a
-      href={href}
-      className={`${BASE} ${TAILLES[taille]} ${VARIANTES[variante]} ${className}`}
-      {...reste}
-    >
+    <a href={href} className={classes} {...reste}>
       {children}
     </a>
   );

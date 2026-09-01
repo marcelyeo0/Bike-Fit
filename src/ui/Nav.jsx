@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useState } from 'react';
 import { List, X } from '@phosphor-icons/react';
+import { useAuth } from '@clerk/nextjs';
 import Bouton from './components/Bouton';
 
 const LIENS = [
@@ -11,6 +14,14 @@ const LIENS = [
 
 export default function Nav() {
   const [ouvert, setOuvert] = useState(false);
+  const { isLoaded, isSignedIn } = useAuth();
+
+  // Tant que Clerk n'a pas resolu la session, on garde l'etat visiteur : c'est
+  // ce que rend le serveur, donc pas de decalage d'hydratation.
+  const connecte = isLoaded && isSignedIn;
+  const cta = connecte
+    ? { href: '/dashboard', label: 'Accéder au dashboard' }
+    : { href: '/sign-up', label: 'Commencer' };
 
   return (
     <nav className="sticky top-0 z-50 border-b border-ligne bg-white/[.92] backdrop-blur-[10px]">
@@ -35,8 +46,8 @@ export default function Nav() {
           <Bouton href="#contact" variante="contour" taille="sm" className="hidden lg:inline-flex">
             Réserver une démo
           </Bouton>
-          <Bouton href="#inscription" taille="sm" className="shadow-rouge-sm">
-            Commencer
+          <Bouton href={cta.href} taille="sm" className="shadow-rouge-sm">
+            {cta.label}
           </Bouton>
           <button
             type="button"

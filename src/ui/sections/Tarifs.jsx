@@ -94,7 +94,7 @@ export default function Tarifs() {
             </ul>
 
             <Bouton
-              href="#inscription"
+              href="/sign-up"
               variante={formule.mise_en_avant ? 'primaire' : 'contour'}
               taille="md"
               className="w-full"

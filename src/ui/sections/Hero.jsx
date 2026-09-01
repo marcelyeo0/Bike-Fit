@@ -47,7 +47,7 @@ export default function Hero() {
             style={{ '--r': caillou.r, animationDuration: caillou.duree }}
           >
             <img
-              src={`${process.env.PUBLIC_URL}/assets/${caillou.src}`}
+              src={`/assets/${caillou.src}`}
               alt=""
               aria-hidden="true"
               className="block w-full animate-monte drop-shadow-[0_22px_18px_rgba(0,0,0,.22)]"
@@ -62,7 +62,7 @@ export default function Hero() {
         <div className="relative w-full">
           <div className="relative w-full">
             <img
-              src={`${process.env.PUBLIC_URL}/assets/hero-cyclist.png`}
+              src="/assets/hero-cyclist.png"
               alt="Cycliste sur home-trainer posé sur un îlot rocheux flottant"
               width="1000"
               height="671"
@@ -125,7 +125,7 @@ export default function Hero() {
           sans cabine dédiée.
         </p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
-          <Bouton href="#inscription" taille="lg">
+          <Bouton href="/sign-up" taille="lg">
             Commencer
           </Bouton>
           <Bouton href="#contact" variante="contour" taille="lg">

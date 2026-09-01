@@ -65,7 +65,7 @@ export default function Cta() {
           home-trainer cette semaine.
         </p>
         <div className="a-reveler flex flex-wrap justify-center gap-3">
-          <Bouton href="#inscription" taille="lg">
+          <Bouton href="/sign-up" taille="lg">
             Commencer
           </Bouton>
           <Bouton href="#contact" variante="contour-sombre" taille="lg">

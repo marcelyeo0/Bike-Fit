@@ -29,7 +29,7 @@ export default function Livrable() {
       <div className="a-reveler">
         <div className="overflow-hidden rounded-bloc border border-ligne bg-fond-doux shadow-media">
           <img
-            src={`${process.env.PUBLIC_URL}/assets/livrable-rapport.jpg`}
+            src="/assets/livrable-rapport.jpg"
             alt="Pages du rapport Axio imprimées, posées sur un établi avec une clé Allen et un stylo"
             width="1024"
             height="768"
