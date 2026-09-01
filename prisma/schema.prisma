@@ -1,0 +1,140 @@
+// Couche donnees Axio.
+//
+// Regle produit : AUCUNE video n'est stockee. Les fichiers sont traites en
+// memoire puis supprimes ; seules les mesures chiffrees et les recommandations
+// qui en decoulent sont persistees (voir modele Study).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum SubscriptionStatus {
+  NONE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum Plan {
+  FREE
+  ESSENTIEL
+  ATELIER
+  MULTI
+}
+
+enum StudyStatus {
+  DRAFT
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum Joint {
+  KNEE
+  HIP
+  ELBOW
+  SHOULDER
+  ANKLE
+}
+
+enum MeasurementStatus {
+  OK
+  WARNING
+  OUT
+}
+
+/// Le velociste. `clerkId` fait le lien avec la session Clerk ; c'est la seule
+/// cle par laquelle le code serveur retrouve un utilisateur.
+model User {
+  id                 String             @id @default(cuid())
+  clerkId            String             @unique
+  email              String             @unique
+  name               String?
+  role               Role               @default(USER)
+  stripeCustomerId   String?            @unique
+  subscriptionStatus SubscriptionStatus @default(NONE)
+  plan               Plan               @default(FREE)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  clients Client[]
+  studies Study[]
+}
+
+/// Le client final du velociste — la personne qui vient se faire regler son velo.
+model Client {
+  id        String   @id @default(cuid())
+  userId    String
+  nom       String
+  email     String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studies Study[]
+
+  @@index([userId])
+}
+
+/// Une seance d'analyse posturale. Ne contient aucun media : uniquement le
+/// resultat de l'analyse.
+model Study {
+  id          String      @id @default(cuid())
+  userId      String
+  clientId    String
+  status      StudyStatus @default(DRAFT)
+  isDemo      Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  completedAt DateTime?
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  measurements    Measurement[]
+  recommendations Recommendation[]
+
+  @@index([userId])
+  @@index([clientId])
+}
+
+/// Un angle articulaire mesure, avec la fourchette cible retenue pour CETTE
+/// etude. La cible est copiee ici plutot que referencee : les fourchettes
+/// dependent du questionnaire et peuvent evoluer, un rapport doit rester lisible
+/// tel qu'il a ete produit.
+model Measurement {
+  id        String            @id @default(cuid())
+  studyId   String
+  joint     Joint
+  value     Float
+  targetMin Float
+  targetMax Float
+  status    MeasurementStatus
+
+  study Study @relation(fields: [studyId], references: [id], onDelete: Cascade)
+
+  @@index([studyId])
+}
+
+/// Conseil de reglage. `joint` est nullable : certaines recommandations portent
+/// sur la position globale, pas sur une articulation en particulier.
+model Recommendation {
+  id       String @id @default(cuid())
+  studyId  String
+  joint    Joint?
+  text     String
+  priority Int    @default(0)
+
+  study Study @relation(fields: [studyId], references: [id], onDelete: Cascade)
+
+  @@index([studyId])
+}

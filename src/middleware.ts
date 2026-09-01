@@ -7,8 +7,22 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
  */
 const routesProtegees = createRouteMatcher(['/dashboard(.*)', '/admin(.*)']);
 
+/**
+ * Routes explicitement publiques, verifiees AVANT la liste protegee.
+ *
+ * Le webhook Clerk arrive depuis les serveurs de Svix, sans cookie de session :
+ * toute tentative d'authentification le ferait echouer. Il porte sa propre
+ * preuve — la signature `svix-*`, verifiee dans le handler.
+ *
+ * Aujourd'hui la liste protegee ne le couvre pas, donc il passerait de toute
+ * facon ; on le declare quand meme pour qu'un futur elargissement de
+ * `routesProtegees` ne casse pas la synchronisation en silence.
+ */
+const routesPubliques = createRouteMatcher(['/api/webhooks(.*)']);
+
 export default clerkMiddleware(
   async (auth, request) => {
+    if (routesPubliques(request)) return;
     if (!routesProtegees(request)) return;
 
     const { userId, redirectToSignIn } = await auth();

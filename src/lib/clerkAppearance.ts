@@ -93,9 +93,9 @@ export const apparenceAxio = {
   },
 
   elements: {
-    rootBox: {
-      width: '100%',
-    },
+    // Pas de `rootBox: { width: '100%' }` ici : les pages centrent la carte
+    // avec `flex justify-center`. Forcer la pleine largeur ferait occuper
+    // toute la ligne au conteneur, et la carte se rangerait a gauche.
 
     // Meme echelle que les cartes de la landing : 24px (borderRadius.bloc),
     // un filet clair, pas d'ombre. L'elevation est declaree une seule fois.
