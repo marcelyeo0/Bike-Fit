@@ -1,8 +1,8 @@
 {
-  "name": "bikefit-web",
+  "name": "axio-web",
   "version": "0.1.0",
   "private": true,
-  "description": "Site vitrine de BikeFit — analyse posturale cycliste en temps reel.",
+  "description": "Site vitrine d'Axio — analyse posturale cycliste en temps reel.",
   "dependencies": {
     "@clerk/localizations": "^4.15.8",
     "@clerk/nextjs": "^7.8.3",
