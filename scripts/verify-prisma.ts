@@ -43,7 +43,9 @@ async function main() {
     return;
   }
 
-  console.log(`   Etude de demonstration pour ${demo.client.nom} (${demo.status}) :`);
+  // `client` est optionnel depuis que Study.clientId est nullable.
+  const sujet = demo.client?.nom ?? demo.titre ?? 'etude sans client';
+  console.log(`   Etude de demonstration pour ${sujet} (${demo.status}) :`);
   for (const m of demo.measurements) {
     const cible = `${m.targetMin}-${m.targetMax}`;
     console.log(

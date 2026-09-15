@@ -90,16 +90,29 @@ model Client {
 /// Une seance d'analyse posturale. Ne contient aucun media : uniquement le
 /// resultat de l'analyse.
 model Study {
-  id          String      @id @default(cuid())
-  userId      String
-  clientId    String
+  id String @id @default(cuid())
+
+  userId String
+
+  /// Nullable par precaution d'architecture, pas par besoin actuel : aucune
+  /// interface ne cree aujourd'hui d'etude sans client. Passer une colonne de
+  /// NOT NULL a NULL est gratuit ; l'inverse impose de trouver une valeur pour
+  /// chaque ligne existante. On paie le champ maintenant pour ne pas payer la
+  /// migration plus tard, le jour ou une etude devra exister avant sa fiche
+  /// client (essai en atelier, seance decouverte, import d'historique).
+  clientId String?
+
+  /// Libelle de repli quand `clientId` est nul. Non expose dans l'interface
+  /// pour l'instant : il n'existe encore aucun chemin de creation sans client.
+  titre String?
+
   status      StudyStatus @default(DRAFT)
   isDemo      Boolean     @default(false)
   createdAt   DateTime    @default(now())
   completedAt DateTime?
 
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client          Client?          @relation(fields: [clientId], references: [id], onDelete: Cascade)
   measurements    Measurement[]
   recommendations Recommendation[]
 

@@ -8,10 +8,23 @@ import type { User } from '../generated/prisma/client';
 /**
  * Porte d'entree de toute verification serveur.
  *
- * Regle : aucune route, action serveur ou route handler ne lit `auth()` de
- * Clerk directement pour decider d'un acces. Tout passe par ces trois
- * fonctions, pour que la correspondance session Clerk -> ligne User et le
- * controle de role vivent a un seul endroit.
+ * Regle : aucune route, action serveur ou route handler ne lit `auth()` ni
+ * `currentUser()` de Clerk directement pour decider d'un acces. Tout passe par
+ * ces trois fonctions, pour que la correspondance session Clerk -> ligne User
+ * et le controle de role vivent a un seul endroit.
+ *
+ * GARDE : ce fichier est le SEUL du projet autorise a importer depuis
+ * `@clerk/nextjs/server` (avec `src/middleware.ts`, qui protege les routes en
+ * amont, et le webhook, qui n'a pas de session). Une page qui appelle
+ * `currentUser()` court-circuite le rattrapage de ligne User ci-dessous et
+ * n'a pas d'`id` interne : elle ne peut donc rien filtrer en base.
+ *
+ * Faute d'ESLint dans le projet, la regle tient par cette convention. Le jour
+ * ou ESLint arrive, la poser comme :
+ *   'no-restricted-imports': ['error', { paths: [{ name: '@clerk/nextjs/server',
+ *     importNames: ['auth', 'currentUser'],
+ *     message: 'Passer par requireUser()/getCurrentUser() de src/lib/auth.ts.' }] }]
+ * avec une exception pour ce fichier, le middleware et le webhook.
  */
 
 /**
