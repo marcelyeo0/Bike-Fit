@@ -8,12 +8,12 @@
  * ---------------------------------------------------------------------------
  * Systeme typographique de la surface d'authentification
  * ---------------------------------------------------------------------------
- * Une famille, deux jobs — la grammaire du reste du site :
+ * Deux familles, deux jobs — la grammaire du reste du site :
  *
- *   Geist       tout le texte : mot-marque, titre de carte, sous-titre,
- *               champs, boutons, liens, messages. La hierarchie vient de la
- *               graisse et de la taille.
- *   Geist Mono  les petits libelles en capitales (champs, separateur).
+ *   Fira Sans   le texte courant : sous-titre, champs, boutons, liens,
+ *               messages.
+ *   Fira Code   le titre de carte et les petits libelles en capitales
+ *               (champs, separateur).
  *
  * Les deux arrivent par next/font, en variables CSS posees sur <html>
  * (voir app/layout).
@@ -29,8 +29,8 @@ const TEXTE_DOUX = '#5A5A5A'; // 7.0:1 sur blanc
 const LIGNE = '#E9E9E9';
 const CONTOUR = '#D5D5D5';
 
-const SANS = 'var(--font-geist), Helvetica, Arial, sans-serif';
-const MONO = 'var(--font-geist-mono), ui-monospace, Consolas, monospace';
+const SANS = 'var(--police-texte), Helvetica, Arial, sans-serif';
+const MONO = 'var(--police-code), ui-monospace, Consolas, monospace';
 
 /**
  * Role « libelle » : petites capitales en chasse fixe, interlettrage ouvert.
@@ -100,14 +100,13 @@ export const apparenceAxio = {
       backgroundColor: '#FFFFFF',
     },
 
-    // Titre de page : Geist demi-gras serre, comme les titres du dashboard.
+    // Titre de page : Fira Code demi-gras serre, comme les titres du dashboard.
     headerTitle: {
-      fontFamily: SANS,
-      // Sur un ecran de 390px, la largeur utile dans la carte tombe a 262px
-      // alors que « Creez votre compte » en mesure 251 : 11px de marge, et
-      // toute chaine un peu plus longue casse sur deux lignes. Le clamp rend
-      // 22px sur telephone et garde 26px des que la place existe.
-      fontSize: 'clamp(22px, 5.2vw, 26px)',
+      fontFamily: MONO,
+      // Sur un ecran de 390px, la largeur utile dans la carte tombe a 262px.
+      // En chasse fixe un caractere vaut 0,6 em : « Creez votre compte »
+      // (18 caracteres) tient sur une ligne a 20px, pas au-dela.
+      fontSize: 'clamp(20px, 5vw, 24px)',
       fontWeight: 600,
       letterSpacing: '-0.03em',
       lineHeight: '1.1',

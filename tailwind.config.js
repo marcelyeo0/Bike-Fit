@@ -22,19 +22,21 @@ module.exports = {
         'fond-doux': '#F6F6F5',
       },
       fontFamily: {
-        // Une seule famille : Geist. `display` ne change que la graisse et
-        // l'interlettrage (voir .font-display dans globals.css). Geist Mono
-        // porte les valeurs mesurees, les codes et les petits libelles.
-        display: ['var(--font-geist)', 'Helvetica', 'Arial', 'sans-serif'],
-        sans: ['var(--font-geist)', 'Helvetica', 'Arial', 'sans-serif'],
-        mono: ['var(--font-geist-mono)', 'ui-monospace', 'Consolas', 'monospace'],
+        // Appariement « Dashboard Data » : Fira Code en titrage, Fira Sans en
+        // courant. Fira Code sert aussi de chasse fixe pour les valeurs
+        // mesurees, les codes et les petits libelles. La graisse et
+        // l'interlettrage des titres vivent dans .font-display (globals.css).
+        display: ['var(--police-code)', 'ui-monospace', 'Consolas', 'monospace'],
+        sans: ['var(--police-texte)', 'Helvetica', 'Arial', 'sans-serif'],
+        mono: ['var(--police-code)', 'ui-monospace', 'Consolas', 'monospace'],
       },
       fontSize: {
-        // echelle display calee sur le canvas de reference
-        titre: ['clamp(38px, 6vw, 74px)', { lineHeight: '1', letterSpacing: '-0.04em' }],
-        'titre-sm': ['clamp(30px, 3.6vw, 44px)', { lineHeight: '1.08', letterSpacing: '-0.035em' }],
-        'titre-lg': ['clamp(40px, 7vw, 92px)', { lineHeight: '0.98', letterSpacing: '-0.045em' }],
-        fantome: ['clamp(64px, 13.5vw, 200px)', { lineHeight: '0.86', letterSpacing: '-0.05em' }],
+        // echelle display. Une chasse fixe est large : les tailles plancher
+        // gardent le mot le plus long d'un titre sur une ligne de telephone.
+        titre: ['clamp(30px, 5.4vw, 66px)', { lineHeight: '1.04', letterSpacing: '-0.035em' }],
+        'titre-sm': ['clamp(25px, 3.2vw, 38px)', { lineHeight: '1.12', letterSpacing: '-0.03em' }],
+        'titre-lg': ['clamp(32px, 6.2vw, 80px)', { lineHeight: '1.02', letterSpacing: '-0.04em' }],
+        fantome: ['clamp(56px, 12vw, 180px)', { lineHeight: '0.9', letterSpacing: '-0.05em' }],
       },
       borderRadius: {
         // une seule echelle : 24px pour les blocs, pill pour l'interactif
