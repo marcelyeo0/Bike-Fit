@@ -265,8 +265,8 @@ npm run biomeca:verify   # angles, fourchettes, cadre, consignes : sans base ni 
 - L'étude de démonstration (`isDemo`) est lisible par tous les ateliers,
   modifiable et supprimable par aucun.
 
-La séance de capture (caméra, détection de pose, calcul des angles) n'est pas
-encore là : une étude créée reste en brouillon, sans mesure.
+Une étude créée reste en brouillon jusqu'à l'enregistrement de sa séance de
+capture (voir plus haut).
 
 ## Vocabulaire
 
