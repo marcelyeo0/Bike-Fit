@@ -62,7 +62,7 @@ export default function CarteEtude({ etude }: { etude: EtudeResumee }) {
           </div>
 
           {etude.isDemo && (
-            <span className="shrink-0 rounded-full bg-rouge-cta px-3 py-1 font-condensed text-[11px] uppercase tracking-[.14em] text-white">
+            <span className="shrink-0 rounded-full bg-rouge-cta px-3 py-1 font-mono text-[11px] uppercase tracking-[.08em] text-white">
               Démo
             </span>
           )}

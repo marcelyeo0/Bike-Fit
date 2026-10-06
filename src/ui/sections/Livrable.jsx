@@ -10,7 +10,7 @@ export default function Livrable() {
   return (
     <section className="mx-auto grid max-w-page grid-cols-1 items-center gap-[70px] px-7 py-[140px] lg:grid-cols-2">
       <div className="a-reveler">
-        <h2 className="m-0 mb-[22px] font-display text-titre-sm uppercase text-encre">
+        <h2 className="m-0 mb-[22px] font-display text-titre-sm text-encre">
           Le livrable que votre client emporte
         </h2>
         <p className="m-0 mb-[18px] max-w-[46ch] text-[17px] leading-[1.65] text-texte-doux">

@@ -33,7 +33,7 @@ export const LIEN_ACCENT =
 
 export const BLOC = 'rounded-bloc border border-ligne bg-white';
 
-export const SURTITRE = 'm-0 font-condensed text-[12px] uppercase tracking-[.16em] text-gris';
+export const SURTITRE = 'm-0 font-mono text-[12px] uppercase tracking-[.08em] text-gris';
 
 export const ETIQUETTE = 'block text-[14px] font-semibold text-encre';
 

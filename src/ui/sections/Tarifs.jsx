@@ -40,7 +40,7 @@ export default function Tarifs() {
   return (
     <section id="tarifs" className="mx-auto max-w-page px-7 pb-[140px]">
       <div className="a-reveler mb-14 max-w-[640px]">
-        <h2 className="m-0 font-display text-titre uppercase text-encre">Tarifs</h2>
+        <h2 className="m-0 font-display text-titre text-encre">Tarifs</h2>
         <p className="mt-5 max-w-[42ch] text-[16.5px] leading-[1.6] text-texte-doux">
           Sans engagement. Analyses illimitées sur toutes les formules.
         </p>
@@ -64,7 +64,7 @@ export default function Tarifs() {
             )}
 
             <div>
-              <h3 className="m-0 font-condensed text-xl font-bold uppercase tracking-[.04em] text-encre">
+              <h3 className="m-0 text-lg font-semibold tracking-[-0.01em] text-encre">
                 {formule.nom}
               </h3>
               <p className="m-0 mt-[14px] flex items-baseline gap-[6px]">

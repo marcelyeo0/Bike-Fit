@@ -114,7 +114,7 @@ export default async function EtudePage({
             </span>
             <span className="print:hidden">· {date}</span>
             {etude.isDemo && (
-              <span className="rounded-full bg-rouge-cta px-3 py-1 font-condensed text-[11px] uppercase tracking-[.14em] text-white print:hidden">
+              <span className="rounded-full bg-rouge-cta px-3 py-1 font-mono text-[11px] uppercase tracking-[.08em] text-white print:hidden">
                 Démo
               </span>
             )}
@@ -150,7 +150,7 @@ export default async function EtudePage({
           },
         ].map(({ terme, valeur }) => (
           <div key={terme} className={`${BLOC} p-5 print:rounded-none print:border-0 print:p-0`}>
-            <dt className="font-condensed text-[11px] uppercase tracking-[.14em] text-gris">
+            <dt className="font-mono text-[11px] uppercase tracking-[.08em] text-gris">
               {terme}
             </dt>
             <dd className="m-0 mt-2 text-[17px] font-semibold text-encre">{valeur}</dd>
@@ -185,7 +185,7 @@ export default async function EtudePage({
           <div className={`${BLOC} mt-4 overflow-x-auto print:rounded-none print:border-0`}>
             <table className="w-full min-w-[560px] border-collapse text-left text-[14.5px] print:min-w-0">
               <thead>
-                <tr className="border-b border-ligne font-condensed text-[11px] uppercase tracking-[.14em] text-gris print:border-encre">
+                <tr className="border-b border-ligne font-mono text-[11px] uppercase tracking-[.08em] text-gris print:border-encre">
                   <th scope="col" className="px-6 py-4 font-semibold print:px-0 print:py-2">
                     Articulation
                   </th>
@@ -209,10 +209,10 @@ export default async function EtudePage({
                     <th scope="row" className="px-6 py-4 font-semibold text-encre print:px-0 print:py-2">
                       {LIBELLES_JOINT[mesure.joint]}
                     </th>
-                    <td className="px-6 py-4 text-encre print:px-0 print:py-2">
+                    <td className="px-6 py-4 font-mono tabular-nums text-encre print:px-0 print:py-2">
                       {formaterDegres(mesure.value)}
                     </td>
-                    <td className="px-6 py-4 text-texte print:px-0 print:py-2">
+                    <td className="px-6 py-4 font-mono tabular-nums text-texte print:px-0 print:py-2">
                       {formaterDegres(mesure.targetMin)} à {formaterDegres(mesure.targetMax)}
                     </td>
                     <td className={`px-6 py-4 print:px-0 print:py-2 ${TON_MESURE[mesure.status]}`}>
@@ -240,12 +240,12 @@ export default async function EtudePage({
               >
                 <span
                   aria-hidden="true"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-encre font-condensed text-[14px] font-semibold text-white"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-encre font-mono text-[13px] font-semibold text-white"
                 >
                   {rang + 1}
                 </span>
                 <div>
-                  <p className="m-0 font-condensed text-[11px] uppercase tracking-[.14em] text-gris">
+                  <p className="m-0 font-mono text-[11px] uppercase tracking-[.08em] text-gris">
                     {recommandation.joint ? LIBELLES_JOINT[recommandation.joint] : 'Position générale'}
                   </p>
                   <p className="m-0 mt-1 text-[15px] leading-[1.6] text-texte">

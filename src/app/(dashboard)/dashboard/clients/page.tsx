@@ -96,7 +96,7 @@ export default async function ClientsPage({
             <div className={`${BLOC} overflow-x-auto`}>
               <table className="w-full min-w-[620px] border-collapse text-left text-[14.5px]">
                 <thead>
-                  <tr className="border-b border-ligne font-condensed text-[11px] uppercase tracking-[.14em] text-gris">
+                  <tr className="border-b border-ligne font-mono text-[11px] uppercase tracking-[.08em] text-gris">
                     <th scope="col" className="px-6 py-4 font-semibold">
                       Code
                     </th>
@@ -117,7 +117,7 @@ export default async function ClientsPage({
                 <tbody>
                   {clients.map((client) => (
                     <tr key={client.id} className="border-b border-ligne-douce last:border-b-0">
-                      <th scope="row" className="px-6 py-4 font-semibold">
+                      <th scope="row" className="px-6 py-4 font-mono font-medium">
                         <Link
                           href={`/dashboard/clients/${client.id}`}
                           className="text-encre underline decoration-ligne underline-offset-4 transition-colors hover:decoration-encre"
@@ -125,9 +125,9 @@ export default async function ClientsPage({
                           {client.code}
                         </Link>
                       </th>
-                      <td className="px-6 py-4 text-texte">{formaterCm(client.tailleCm)}</td>
-                      <td className="px-6 py-4 text-texte">{formaterCm(client.entrejambeCm)}</td>
-                      <td className="px-6 py-4 text-texte">{client.nombreEtudes}</td>
+                      <td className="px-6 py-4 font-mono tabular-nums text-texte">{formaterCm(client.tailleCm)}</td>
+                      <td className="px-6 py-4 font-mono tabular-nums text-texte">{formaterCm(client.entrejambeCm)}</td>
+                      <td className="px-6 py-4 font-mono tabular-nums text-texte">{client.nombreEtudes}</td>
                       <td className="px-6 py-4 text-texte-doux">
                         {client.derniereEtude ? formaterDate(client.derniereEtude) : '—'}
                       </td>

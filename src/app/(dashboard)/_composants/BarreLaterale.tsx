@@ -90,7 +90,7 @@ export default function BarreLaterale({ plan }: { plan: Plan }) {
 
       <div className="shrink-0 border-t border-ligne-douce p-4">
         <div className="rounded-[14px] bg-fond-doux px-4 py-3">
-          <p className="m-0 font-condensed text-[11px] uppercase tracking-[.14em] text-gris">
+          <p className="m-0 font-mono text-[11px] uppercase tracking-[.08em] text-gris">
             Formule
           </p>
           <p className="m-0 mt-1 text-[14.5px] font-semibold text-encre">{LIBELLES_PLAN[plan]}</p>

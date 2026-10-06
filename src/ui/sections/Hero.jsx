@@ -105,7 +105,7 @@ export default function Hero() {
               style={{ ...angle.style, animationDelay: angle.delai }}
               className={`absolute hidden animate-apparait md:block ${angle.ancre}`}
             >
-              <div className="whitespace-nowrap rounded-full border border-ligne-douce bg-white px-[14px] py-2 font-condensed text-[17px] font-bold text-rouge-texte shadow-[0_14px_26px_-14px_rgba(0,0,0,.35)]">
+              <div className="whitespace-nowrap rounded-full border border-ligne-douce bg-white px-[14px] py-2 font-mono text-[15px] font-semibold text-rouge-texte shadow-[0_14px_26px_-14px_rgba(0,0,0,.35)]">
                 {angle.valeur}
                 <span className="ml-2 text-[12.5px] font-semibold tracking-[.06em] text-gris">
                   {angle.nom}

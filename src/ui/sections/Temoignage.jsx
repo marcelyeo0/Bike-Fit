@@ -8,7 +8,7 @@ export default function Temoignage() {
           «
         </span>
         <blockquote className="m-0">
-          <p className="mx-auto mb-10 max-w-[820px] font-condensed text-[clamp(24px,3.4vw,40px)] font-semibold leading-[1.24] text-encre [text-wrap:pretty]">
+          <p className="mx-auto mb-10 max-w-[820px] text-[clamp(22px,3vw,34px)] font-medium leading-[1.3] tracking-[-0.02em] text-encre [text-wrap:pretty]">
             Je facture le bike fit 120 € et je le rentabilise en trois rendez-vous. Avant Axio,
             j'envoyais ces clients ailleurs.
           </p>

@@ -26,7 +26,7 @@ function Monogramme({ initiales, forme }) {
         y="15"
         textAnchor="middle"
         dominantBaseline="central"
-        fontFamily="Barlow Semi Condensed, Barlow, sans-serif"
+        className="font-sans"
         fontSize="12"
         fontWeight="700"
         fill="#2B2B2B"
@@ -52,7 +52,7 @@ export default function Preuve() {
           {ENSEIGNES.map((enseigne) => (
             <li key={enseigne.nom} className="flex items-center gap-[10px]">
               <Monogramme initiales={enseigne.initiales} forme={enseigne.forme} />
-              <span className="font-condensed text-[17px] font-bold uppercase tracking-[.1em] text-[#2B2B2B]">
+              <span className="text-[15px] font-semibold uppercase tracking-[.08em] text-[#2B2B2B]">
                 {enseigne.nom}
               </span>
             </li>

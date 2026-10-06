@@ -22,16 +22,19 @@ module.exports = {
         'fond-doux': '#F6F6F5',
       },
       fontFamily: {
-        display: ['"Archivo Black"', 'Helvetica', 'Arial', 'sans-serif'],
-        sans: ['Barlow', 'Helvetica', 'Arial', 'sans-serif'],
-        condensed: ['"Barlow Semi Condensed"', 'Barlow', 'sans-serif'],
+        // Une seule famille : Geist. `display` ne change que la graisse et
+        // l'interlettrage (voir .font-display dans globals.css). Geist Mono
+        // porte les valeurs mesurees, les codes et les petits libelles.
+        display: ['var(--font-geist)', 'Helvetica', 'Arial', 'sans-serif'],
+        sans: ['var(--font-geist)', 'Helvetica', 'Arial', 'sans-serif'],
+        mono: ['var(--font-geist-mono)', 'ui-monospace', 'Consolas', 'monospace'],
       },
       fontSize: {
         // echelle display calee sur le canvas de reference
-        titre: ['clamp(38px, 6vw, 74px)', { lineHeight: '0.94', letterSpacing: '-0.02em' }],
-        'titre-sm': ['clamp(30px, 3.6vw, 44px)', { lineHeight: '1', letterSpacing: '-0.02em' }],
-        'titre-lg': ['clamp(40px, 7vw, 92px)', { lineHeight: '0.92', letterSpacing: '-0.02em' }],
-        fantome: ['clamp(64px, 13.5vw, 200px)', { lineHeight: '0.86', letterSpacing: '-0.02em' }],
+        titre: ['clamp(38px, 6vw, 74px)', { lineHeight: '1', letterSpacing: '-0.04em' }],
+        'titre-sm': ['clamp(30px, 3.6vw, 44px)', { lineHeight: '1.08', letterSpacing: '-0.035em' }],
+        'titre-lg': ['clamp(40px, 7vw, 92px)', { lineHeight: '0.98', letterSpacing: '-0.045em' }],
+        fantome: ['clamp(64px, 13.5vw, 200px)', { lineHeight: '0.86', letterSpacing: '-0.05em' }],
       },
       borderRadius: {
         // une seule echelle : 24px pour les blocs, pill pour l'interactif

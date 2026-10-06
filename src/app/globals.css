@@ -23,6 +23,14 @@
     outline-offset: 3px;
     border-radius: 4px;
   }
+
+  /* Titrage : Geist en demi-gras serre. La graisse et l'interlettrage vivent
+     ici, en couche base, pour qu'un utilitaire (font-bold, tracking-*, ou
+     l'echelle text-titre) garde le dernier mot. */
+  .font-display {
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
 }
 
 @layer components {

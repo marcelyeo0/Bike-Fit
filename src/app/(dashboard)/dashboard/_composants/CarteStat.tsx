@@ -17,7 +17,7 @@ export default function CarteStat({
 }) {
   return (
     <div className="rounded-bloc border border-ligne bg-white p-6">
-      <p className="m-0 font-condensed text-[11px] uppercase tracking-[.14em] text-gris">
+      <p className="m-0 font-mono text-[11px] uppercase tracking-[.08em] text-gris">
         {libelle}
       </p>
       <p

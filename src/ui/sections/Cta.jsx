@@ -55,7 +55,7 @@ export default function Cta() {
       ))}
 
       <div className="relative mx-auto max-w-[1000px] px-7 py-[150px] text-center">
-        <h2 className="a-reveler m-0 mb-[26px] font-display text-titre-lg uppercase text-white">
+        <h2 className="a-reveler m-0 mb-[26px] font-display text-titre-lg text-white">
           Ouvrez votre
           <br />
           studio de fitting

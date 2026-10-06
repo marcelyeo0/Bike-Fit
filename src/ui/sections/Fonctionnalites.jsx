@@ -59,7 +59,7 @@ const CELLULES = [
 export default function Fonctionnalites() {
   return (
     <section id="fonctionnalites" className="mx-auto max-w-page px-7 pt-[130px]">
-      <h2 className="a-reveler m-0 mb-[60px] font-display text-titre uppercase text-encre">
+      <h2 className="a-reveler m-0 mb-[60px] font-display text-titre text-encre">
         Fonctionnalités
       </h2>
 
@@ -67,7 +67,7 @@ export default function Fonctionnalites() {
         {/* Cellule large : la photo porte le propos, pas un graphique dessine. */}
         <article className="a-reveler grid grid-cols-1 items-center gap-9 overflow-hidden rounded-bloc border border-ligne bg-gradient-to-b from-white to-[#FBFBFA] p-6 lg:col-span-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:p-11">
           <div className="max-w-[480px]">
-            <h3 className="m-0 mb-[14px] font-condensed text-[30px] font-bold uppercase leading-[1.05] text-encre">
+            <h3 className="m-0 mb-[14px] text-[26px] font-semibold leading-[1.15] tracking-[-0.02em] text-encre">
               Détection de posture image par image
             </h3>
             <p className="m-0 text-[16.5px] leading-[1.6] text-texte-doux">
@@ -123,7 +123,7 @@ export default function Fonctionnalites() {
               <Icone size={30} weight="regular" className={cellule.iconeClasse} aria-hidden="true" />
               <div>
                 <h3
-                  className={`m-0 mb-[10px] font-condensed text-[22px] font-bold uppercase ${cellule.titreClasse}`}
+                  className={`m-0 mb-[10px] text-[19px] font-semibold tracking-[-0.01em] ${cellule.titreClasse}`}
                 >
                   {cellule.titre}
                 </h3>

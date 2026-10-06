@@ -1,9 +1,22 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { apparenceAxio } from '../lib/clerkAppearance';
 import { localisationAxio } from '../lib/clerkLocalization';
 import './globals.css';
+
+/**
+ * Polices servies par next/font : telechargees au build, hebergees avec
+ * l'application, aucune requete vers Google depuis le navigateur. Elles sont
+ * exposees en variables CSS, lues par tailwind.config.js et le theme Clerk.
+ */
+const geist = Geist({ subsets: ['latin'], variable: '--font-geist', display: 'swap' });
+const geistMono = Geist_Mono({
+  subsets: ['latin'],
+  variable: '--font-geist-mono',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Axio - Analyse de posture cycliste pour les ateliers',
@@ -25,15 +38,7 @@ export const viewport: Viewport = {
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="fr" className={`${geist.variable} ${geistMono.variable}`}>
       <body>
         <ClerkProvider
           localization={localisationAxio}

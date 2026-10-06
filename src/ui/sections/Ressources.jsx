@@ -40,7 +40,7 @@ export default function Ressources() {
   return (
     <section className="mx-auto grid max-w-page grid-cols-1 gap-[70px] px-7 pb-[150px] lg:grid-cols-2">
       <div className="a-reveler">
-        <h2 className="m-0 mb-7 font-display text-titre-sm uppercase text-encre">Matériel requis</h2>
+        <h2 className="m-0 mb-7 font-display text-titre-sm text-encre">Matériel requis</h2>
         <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2">
           {MATERIEL.map(({ Icone, texte }) => (
             <li
@@ -55,7 +55,7 @@ export default function Ressources() {
       </div>
 
       <div className="a-reveler">
-        <h2 className="m-0 mb-7 font-display text-titre-sm uppercase text-encre">Questions</h2>
+        <h2 className="m-0 mb-7 font-display text-titre-sm text-encre">Questions</h2>
         <div>
           {QUESTIONS.map((item, i) => {
             const estOuverte = ouverte === i;

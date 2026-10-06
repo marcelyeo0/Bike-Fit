@@ -39,7 +39,7 @@ export default function Comment() {
   return (
     <section id="comment" className="mx-auto max-w-page px-7 pb-10 pt-[130px]">
       <div className="a-reveler mb-[70px] max-w-[640px]">
-        <h2 className="m-0 font-display text-titre uppercase text-encre">
+        <h2 className="m-0 font-display text-titre text-encre">
           Comment ça
           <br />
           marche
@@ -68,7 +68,7 @@ export default function Comment() {
                 className="block h-full w-full scale-[1.12] object-cover"
               />
             </div>
-            <h3 className="mb-0 mt-7 font-condensed text-[26px] font-bold uppercase leading-none tracking-[.01em] text-encre">
+            <h3 className="mb-0 mt-7 text-[22px] font-semibold leading-tight tracking-[-0.02em] text-encre">
               {etape.titre}
             </h3>
             <p className="mb-0 mt-2 text-[15px] font-semibold text-rouge-texte">{etape.duree}</p>

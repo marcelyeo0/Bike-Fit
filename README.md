@@ -289,8 +289,10 @@ webhook : sans lui, `user.updated` et `user.deleted` ne sont jamais répercutés
 - Palette : blanc, encre `#0C0C0C`, un seul accent rouge décliné en trois
   valeurs (`rouge` pour les aplats, `rouge-cta` pour les boutons, `rouge-texte`
   pour le petit texte) afin de tenir le contraste AA partout.
-- Typographie : Archivo Black en titrage, Barlow en courant, Barlow Semi
-  Condensed pour les intertitres.
+- Typographie : Geist partout (titres en demi-gras serré, bas de casse), Geist
+  Mono pour les valeurs mesurées, les codes client et les petits libellés.
+  Servies par `next/font` : hébergées avec l'application, aucun appel à Google
+  depuis le navigateur.
 - Rayons : `24px` pour les blocs, `20px` pour les médias, pill pour tout ce qui
   est cliquable.
 - Page en thème clair uniquement. Le hero repose sur un PNG en

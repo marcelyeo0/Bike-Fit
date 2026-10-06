@@ -8,20 +8,15 @@
  * ---------------------------------------------------------------------------
  * Systeme typographique de la surface d'authentification
  * ---------------------------------------------------------------------------
- * Trois familles, trois jobs — exactement la grammaire de la landing :
+ * Une famille, deux jobs — la grammaire du reste du site :
  *
- *   Archivo Black      identite seule (le mot-marque AXIO, dans (auth)/layout).
- *                      C'est une police d'affiche : en dessous de ~24px ses
- *                      contreformes se referment. Elle n'entre pas dans la
- *                      carte.
- *   Barlow Semi Cond.  titres et libelles, toujours en capitales. C'est la voix
- *                      « label » du site (sur-titres de section, en-tetes de
- *                      colonne du footer).
- *   Barlow             tout le texte courant : sous-titre, champs, boutons,
- *                      liens, messages.
+ *   Geist       tout le texte : mot-marque, titre de carte, sous-titre,
+ *               champs, boutons, liens, messages. La hierarchie vient de la
+ *               graisse et de la taille.
+ *   Geist Mono  les petits libelles en capitales (champs, separateur).
  *
- * Le contraste vient de la FAMILLE et de la CASSE, pas de la seule taille.
- * Un seul pave noir par ecran : le mot-marque.
+ * Les deux arrivent par next/font, en variables CSS posees sur <html>
+ * (voir app/layout).
  */
 
 // Rappel des tokens (source : tailwind.config.js)
@@ -34,17 +29,15 @@ const TEXTE_DOUX = '#5A5A5A'; // 7.0:1 sur blanc
 const LIGNE = '#E9E9E9';
 const CONTOUR = '#D5D5D5';
 
-const SANS = 'Barlow, Helvetica, Arial, sans-serif';
-const CONDENSED = '"Barlow Semi Condensed", Barlow, Helvetica, Arial, sans-serif';
+const SANS = 'var(--font-geist), Helvetica, Arial, sans-serif';
+const MONO = 'var(--font-geist-mono), ui-monospace, Consolas, monospace';
 
 /**
- * Role « libelle » : capitales condensees, interlettrage ouvert.
- * Repris de l'en-tete de colonne du footer (13px, .1em) resserre a .08em, la
- * chasse etroite de Semi Condensed ayant besoin de moins d'air que Barlow.
+ * Role « libelle » : petites capitales en chasse fixe, interlettrage ouvert.
  */
 const LIBELLE_CAPS = {
-  fontFamily: CONDENSED,
-  fontSize: '13px',
+  fontFamily: MONO,
+  fontSize: '12px',
   fontWeight: 600,
   textTransform: 'uppercase' as const,
   letterSpacing: '0.08em',
@@ -84,9 +77,8 @@ export const apparenceAxio = {
     // petit que la landing (15–17px). 1rem le remet au plancher de lecture.
     fontSize: '1rem',
 
-    // Barlow n'est charge qu'en 400/500/600 (voir le <link> dans app/layout).
-    // Sans ce remappage, le `bold` de Clerk vaut 700 et le navigateur
-    // synthetise un faux gras. 600 est le poids le plus lourd du site.
+    // 600 est le poids le plus lourd du site : le `bold` de Clerk (700) est
+    // ramene dessus pour rester dans la meme echelle de graisses.
     fontWeight: { normal: 400, medium: 500, semibold: 600, bold: 600 },
 
     borderRadius: '12px',
@@ -108,19 +100,16 @@ export const apparenceAxio = {
       backgroundColor: '#FFFFFF',
     },
 
-    // Titre de page. Semi Condensed en capitales : lisible sur une carte de
-    // 420px, encaisse l'expansion du francais, et laisse Archivo Black etre
-    // l'unique moment display de l'ecran.
+    // Titre de page : Geist demi-gras serre, comme les titres du dashboard.
     headerTitle: {
-      fontFamily: CONDENSED,
+      fontFamily: SANS,
       // Sur un ecran de 390px, la largeur utile dans la carte tombe a 262px
       // alors que « Creez votre compte » en mesure 251 : 11px de marge, et
       // toute chaine un peu plus longue casse sur deux lignes. Le clamp rend
       // 22px sur telephone et garde 26px des que la place existe.
       fontSize: 'clamp(22px, 5.2vw, 26px)',
-      fontWeight: 700,
-      textTransform: 'uppercase',
-      letterSpacing: '0.04em',
+      fontWeight: 600,
+      letterSpacing: '-0.03em',
       lineHeight: '1.1',
       color: ENCRE,
     },
