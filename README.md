@@ -331,9 +331,8 @@ webhook : sans lui, `user.updated` et `user.deleted` ne sont jamais répercutés
 - Palette : blanc, encre `#0C0C0C`, un seul accent rouge décliné en trois
   valeurs (`rouge` pour les aplats, `rouge-cta` pour les boutons, `rouge-texte`
   pour le petit texte) afin de tenir le contraste AA partout.
-- Typographie : appariement « Dashboard Data » — Fira Code pour les titres
-  (demi-gras serré, bas de casse), les valeurs mesurées, les codes client et
-  les petits libellés ; Fira Sans pour le texte courant.
+- Typographie : Geist partout (titres en demi-gras serré, bas de casse), Geist
+  Mono pour les valeurs mesurées, les codes client et les petits libellés.
   Servies par `next/font` : hébergées avec l'application, aucun appel à Google
   depuis le navigateur.
 - Rayons : `24px` pour les blocs, `20px` pour les médias, pill pour tout ce qui
