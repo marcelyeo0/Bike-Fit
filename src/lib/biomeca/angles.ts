@@ -18,14 +18,20 @@ export const ARTICULATIONS: Articulation[] = ['KNEE', 'HIP', 'ELBOW', 'SHOULDER'
 
 export type Point = { x: number; y: number };
 
-/** Les six points du cote filme, en pixels (pas en coordonnees normalisees). */
-export type PointsProfil = {
-  epaule: Point;
-  coude: Point;
-  poignet: Point;
-  hanche: Point;
-  genou: Point;
-  cheville: Point;
+/**
+ * Les six points du cote filme, en pixels (pas en coordonnees normalisees).
+ * Un point mal vu est absent : chaque angle se calcule des que SES trois
+ * points sont la, sans attendre le corps entier.
+ */
+export type NomPoint = 'epaule' | 'coude' | 'poignet' | 'hanche' | 'genou' | 'cheville';
+export type PointsProfil = Partial<Record<NomPoint, Point>>;
+
+/** Les trois points de chaque angle : [extremite, sommet, extremite]. */
+export const POINTS_ANGLE: Record<Articulation, [NomPoint, NomPoint, NomPoint]> = {
+  KNEE: ['hanche', 'genou', 'cheville'],
+  HIP: ['epaule', 'hanche', 'genou'],
+  ELBOW: ['epaule', 'coude', 'poignet'],
+  SHOULDER: ['coude', 'epaule', 'hanche'],
 };
 
 export type Angles = Record<Articulation, number>;
@@ -49,22 +55,30 @@ export function calculerAngle(a: Point, sommet: Point, b: Point): number {
   return (Math.acos(cosinus) * 180) / Math.PI;
 }
 
-export function calculerAngles(points: PointsProfil): Angles {
-  return {
-    KNEE: calculerAngle(points.hanche, points.genou, points.cheville),
-    HIP: calculerAngle(points.epaule, points.hanche, points.genou),
-    ELBOW: calculerAngle(points.epaule, points.coude, points.poignet),
-    SHOULDER: calculerAngle(points.coude, points.epaule, points.hanche),
-  };
+/** Les angles calculables avec les points fournis ; les autres sont absents. */
+export function calculerAngles(points: PointsProfil): Partial<Angles> {
+  const angles: Partial<Angles> = {};
+  for (const articulation of ARTICULATIONS) {
+    const [a, sommet, b] = POINTS_ANGLE[articulation].map((nom) => points[nom]);
+    if (!a || !sommet || !b) continue;
+
+    const angle = calculerAngle(a, sommet, b);
+    if (Number.isFinite(angle)) angles[articulation] = angle;
+  }
+  return angles;
 }
 
 /** Duree de la fenetre glissante : quelques tours de pedale a cadence normale. */
-export const FENETRE_MS = 6000;
+export const FENETRE_MS = 8000;
 
-/** En dessous, pas assez d'images pour juger un angle. */
-export const ECHANTILLONS_MIN = 30;
+/**
+ * En dessous, pas assez d'images pour juger un angle. Volontairement bas : sur
+ * un appareil lent la detection tombe a quelques images par seconde, et un
+ * seuil eleve ne serait jamais atteint dans la fenetre.
+ */
+export const ECHANTILLONS_MIN = 12;
 
-type Echantillon = { instant: number; angles: Angles };
+type Echantillon = { instant: number; valeur: number };
 
 function centile(valeursTriees: number[], part: number): number {
   const rang = (valeursTriees.length - 1) * part;
@@ -82,42 +96,57 @@ function centile(valeursTriees: number[], part: number): number {
  * image mal detectee ne fixe pas la mesure.
  */
 export class SuiviAngles {
-  private echantillons: Echantillon[] = [];
+  private series: Record<Articulation, Echantillon[]> = {
+    KNEE: [],
+    HIP: [],
+    ELBOW: [],
+    SHOULDER: [],
+  };
 
   constructor(private readonly fenetreMs: number = FENETRE_MS) {}
 
-  ajouter(instantMs: number, angles: Angles): void {
-    if (ARTICULATIONS.some((cle) => !Number.isFinite(angles[cle]))) return;
-
-    this.echantillons.push({ instant: instantMs, angles });
+  /** Chaque articulation a sa propre serie : un coude cache ne bloque pas le genou. */
+  ajouter(instantMs: number, angles: Partial<Angles>): void {
     const limite = instantMs - this.fenetreMs;
-    while (this.echantillons.length > 0 && this.echantillons[0].instant < limite) {
-      this.echantillons.shift();
+    for (const articulation of ARTICULATIONS) {
+      const serie = this.series[articulation];
+      const valeur = angles[articulation];
+      if (valeur !== undefined && Number.isFinite(valeur)) {
+        serie.push({ instant: instantMs, valeur });
+      }
+      while (serie.length > 0 && serie[0].instant < limite) serie.shift();
     }
   }
 
   vider(): void {
-    this.echantillons = [];
+    for (const articulation of ARTICULATIONS) this.series[articulation] = [];
   }
 
-  get taille(): number {
-    return this.echantillons.length;
+  /** Nombre d'images retenues pour une articulation. */
+  taille(articulation: Articulation): number {
+    return this.series[articulation].length;
   }
 
-  /** Les valeurs jugees, ou null tant que la fenetre est trop courte. */
-  valeursJugees(): Angles | null {
-    if (this.echantillons.length < ECHANTILLONS_MIN) return null;
+  /** Les valeurs jugees des articulations dont la serie est assez longue. */
+  valeursJugees(): Partial<Angles> {
+    const jugees: Partial<Angles> = {};
+    for (const articulation of ARTICULATIONS) {
+      const serie = this.series[articulation];
+      if (serie.length < ECHANTILLONS_MIN) continue;
 
-    const serie = (cle: Articulation) =>
-      this.echantillons.map((echantillon) => echantillon.angles[cle]).sort((a, b) => a - b);
-    const moyenne = (valeurs: number[]) =>
-      valeurs.reduce((somme, valeur) => somme + valeur, 0) / valeurs.length;
-
-    return {
-      KNEE: centile(serie('KNEE'), 0.95),
-      HIP: centile(serie('HIP'), 0.05),
-      ELBOW: moyenne(serie('ELBOW')),
-      SHOULDER: moyenne(serie('SHOULDER')),
-    };
+      const valeurs = serie.map((echantillon) => echantillon.valeur).sort((a, b) => a - b);
+      jugees[articulation] =
+        articulation === 'KNEE'
+          ? centile(valeurs, 0.95)
+          : articulation === 'HIP'
+            ? centile(valeurs, 0.05)
+            : valeurs.reduce((somme, valeur) => somme + valeur, 0) / valeurs.length;
+    }
+    return jugees;
   }
+}
+
+/** Vrai quand les quatre angles sont juges : la seance peut s'enregistrer. */
+export function estComplet(angles: Partial<Angles>): angles is Angles {
+  return ARTICULATIONS.every((articulation) => angles[articulation] !== undefined);
 }

@@ -222,7 +222,7 @@ superposé), les retours texte à droite.
   l'application : aucun CDN. Seuls quatre angles partent vers le serveur, au
   clic sur « Enregistrer la séance ».
 - **Angles** (`src/lib/biomeca/angles.ts`) : genou, hanche, coude, épaule, du
-  côté le mieux vu. Sur une fenêtre glissante de 6 s : extension maximale pour
+  côté le mieux vu. Chaque angle se mesure dès que ses trois points sont bien vus. Sur une fenêtre glissante de 8 s : extension maximale pour
   le genou, angle le plus fermé pour la hanche, moyenne pour coude et épaule.
 - **Fourchettes** : à l'ouverture de la séance, le serveur les calcule pour la
   pratique, l'objectif et la morphologie (taille, entrejambe), puis les fige

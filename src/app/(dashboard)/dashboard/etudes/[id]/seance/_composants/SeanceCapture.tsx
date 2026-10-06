@@ -7,10 +7,13 @@ import type { PoseLandmarker } from '@mediapipe/tasks-vision';
 import type { ContexteSeance } from '../../../../../../../lib/requetes/plages';
 import {
   ARTICULATIONS,
+  POINTS_ANGLE,
   SuiviAngles,
   calculerAngles,
+  estComplet,
   type Angles,
   type Articulation,
+  type NomPoint,
   type PointsProfil,
 } from '../../../../../../../lib/biomeca/angles';
 import {
@@ -52,12 +55,13 @@ const CHEMIN_WASM = '/mediapipe/wasm';
 const CHEMIN_MODELE = '/mediapipe/pose_landmarker.task';
 
 /** Indices des points MediaPipe, pour chaque cote du corps. */
-const POINTS_COTE = {
+const POINTS_COTE: Record<'gauche' | 'droit', Record<NomPoint, number>> = {
   gauche: { epaule: 11, coude: 13, poignet: 15, hanche: 23, genou: 25, cheville: 27 },
   droit: { epaule: 12, coude: 14, poignet: 16, hanche: 24, genou: 26, cheville: 28 },
-} as const;
+};
+const NOMS_POINTS = Object.keys(POINTS_COTE.gauche) as NomPoint[];
 
-const SEGMENTS: [keyof PointsProfil, keyof PointsProfil][] = [
+const SEGMENTS: [NomPoint, NomPoint][] = [
   ['epaule', 'coude'],
   ['coude', 'poignet'],
   ['epaule', 'hanche'],
@@ -65,20 +69,21 @@ const SEGMENTS: [keyof PointsProfil, keyof PointsProfil][] = [
   ['genou', 'cheville'],
 ];
 
-/** Sommet de chaque angle, pour colorer le point quand il sort de sa fourchette. */
-const SOMMET: Record<Articulation, keyof PointsProfil> = {
-  KNEE: 'genou',
-  HIP: 'hanche',
-  ELBOW: 'coude',
-  SHOULDER: 'epaule',
-};
+/**
+ * Deux seuils de visibilite. Un point se DESSINE des qu'il est a peu pres
+ * vu : le squelette apparait meme quand le corps n'est pas entier, et le
+ * velociste voit ce que l'outil suit. Un point ne sert a MESURER un angle que
+ * s'il est bien vu.
+ */
+const VISIBILITE_TRACE = 0.3;
+const VISIBILITE_MESURE = 0.5;
 
-/** En dessous, un point est considere comme mal vu. */
-const VISIBILITE_MIN = 0.5;
-/** Duree pendant laquelle les points doivent rester mal vus avant d'alerter. */
+/** Delai avant de signaler qu'aucune personne n'est detectee. */
 const DELAI_ALERTE_MS = 1500;
 /** Une consigne ne s'affiche (ou ne s'efface) qu'apres avoir tenu ce delai. */
 const DELAI_CONSIGNE_MS = 1500;
+/** Au plus une detection toutes les 30 ms : inutile d'aller plus vite que la video. */
+const PERIODE_ANALYSE_MS = 30;
 /** Cadence de mise a jour du panneau de texte : la video, elle, reste fluide. */
 const PERIODE_TEXTE_MS = 250;
 
@@ -93,15 +98,25 @@ const TON_STATUT: Record<MeasurementStatus, string> = {
   OUT: 'font-semibold text-rouge-texte',
 };
 
+/** Ce qu'il faut voir a l'image pour mesurer chaque angle. */
+const ZONE_REQUISE: Record<Articulation, string> = {
+  KNEE: 'hanche, genou et cheville',
+  HIP: 'épaule, hanche et genou',
+  ELBOW: 'épaule, coude et poignet',
+  SHOULDER: 'coude, épaule et hanche',
+};
+
 type Source = 'camera' | 'fichier';
 type Etat = 'inactif' | 'chargement' | 'actif';
-type Installation = 'attente' | 'correcte' | 'mal-placee';
+type Installation = 'attente' | 'personne' | 'partielle' | 'correcte';
 
 const MESSAGES_INSTALLATION: Record<Installation, string> = {
-  attente: 'En attente d’images.',
+  attente: 'Recherche du cycliste dans l’image…',
+  personne:
+    'Aucune personne détectée. Vérifiez l’éclairage et placez le cycliste entier dans l’image.',
+  partielle:
+    'Cycliste détecté en partie : reculez la caméra pour voir tout le profil, de l’épaule à la cheville.',
   correcte: 'Cycliste bien visible, de profil.',
-  'mal-placee':
-    'Caméra mal placée : le cycliste doit être de profil et entier dans l’image, de l’épaule à la cheville.',
 };
 
 export default function SeanceCapture({
@@ -117,7 +132,8 @@ export default function SeanceCapture({
   const [source, setSource] = useState<Source | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [installation, setInstallation] = useState<Installation>('attente');
-  const [constats, setConstats] = useState<Constat[] | null>(null);
+  const [constats, setConstats] = useState<Constat[]>([]);
+  const [complet, setComplet] = useState(false);
   const [consigne, setConsigne] = useState<Constat | null>(null);
   const [envoi, demarrerEnvoi] = useTransition();
 
@@ -130,11 +146,12 @@ export default function SeanceCapture({
   const adresseFichier = useRef<string | null>(null);
   const boucle = useRef<number | null>(null);
   const suivi = useRef(new SuiviAngles());
-  const valeurs = useRef<Angles | null>(null);
+  const valeurs = useRef<Partial<Angles>>({});
   const horsFourchette = useRef(new Set<Articulation>());
-  const dernierTemps = useRef(-1);
+  const derniereAnalyse = useRef(0);
   const dernierTexte = useRef(0);
-  const malVuDepuis = useRef<number | null>(null);
+  const sansPoseDepuis = useRef<number | null>(null);
+  const installationCourante = useRef<Installation>('attente');
   const candidat = useRef<{ cle: Articulation | null; depuis: number }>({ cle: null, depuis: 0 });
 
   /** Charge le modele au premier demarrage, GPU d'abord, processeur en repli. */
@@ -180,18 +197,24 @@ export default function SeanceCapture({
       contexte2d.lineWidth = epaisseur;
       contexte2d.beginPath();
       for (const [debut, fin] of SEGMENTS) {
-        contexte2d.moveTo(points[debut].x, points[debut].y);
-        contexte2d.lineTo(points[fin].x, points[fin].y);
+        const a = points[debut];
+        const b = points[fin];
+        if (!a || !b) continue;
+        contexte2d.moveTo(a.x, a.y);
+        contexte2d.lineTo(b.x, b.y);
       }
       contexte2d.stroke();
     }
 
+    // Le sommet d'un angle hors fourchette passe au rouge.
     const sommetsHors = new Set(
-      [...horsFourchette.current].map((articulation) => SOMMET[articulation])
+      [...horsFourchette.current].map((articulation) => POINTS_ANGLE[articulation][1])
     );
-    for (const nom of Object.keys(points) as (keyof PointsProfil)[]) {
+    for (const nom of NOMS_POINTS) {
+      const point = points[nom];
+      if (!point) continue;
       contexte2d.beginPath();
-      contexte2d.arc(points[nom].x, points[nom].y, unite * 2.4, 0, Math.PI * 2);
+      contexte2d.arc(point.x, point.y, unite * 2.4, 0, Math.PI * 2);
       contexte2d.fillStyle = sommetsHors.has(nom) ? ROUGE : BLANC;
       contexte2d.fill();
       contexte2d.lineWidth = unite * 0.8;
@@ -204,10 +227,6 @@ export default function SeanceCapture({
     (maintenant: number) => {
       const jugees = suivi.current.valeursJugees();
       valeurs.current = jugees;
-      if (!jugees) {
-        setConstats(null);
-        return;
-      }
 
       const nouveaux = etablirConstats(
         jugees,
@@ -219,6 +238,8 @@ export default function SeanceCapture({
         nouveaux.filter((constat) => constat.statut === 'OUT').map((c) => c.articulation)
       );
       setConstats(nouveaux);
+      setComplet(estComplet(jugees));
+      setInstallation(installationCourante.current);
 
       // Hysteresis : la consigne prioritaire ne change qu'une fois stable,
       // pour ne pas clignoter quand un angle oscille autour d'une borne.
@@ -239,48 +260,62 @@ export default function SeanceCapture({
     const image = video.current;
     const modele = detecteur.current;
     if (!image || !modele || image.readyState < 2 || image.videoWidth === 0) return;
-    // Une meme image n'est analysee qu'une fois.
-    if (image.currentTime === dernierTemps.current) return;
-    dernierTemps.current = image.currentTime;
 
+    // Cadence bornee par l'horloge, pas par `currentTime` : selon la source
+    // (camera, fichier en boucle, image figee) ce dernier peut ne pas avancer
+    // d'une image a l'autre, et l'analyse s'arreterait sans rien signaler.
     const maintenant = performance.now();
-    const resultat = modele.detectForVideo(image, maintenant);
-    const pose = resultat.landmarks[0];
+    if (maintenant - derniereAnalyse.current < PERIODE_ANALYSE_MS) return;
+    derniereAnalyse.current = maintenant;
 
-    let points: PointsProfil | null = null;
+    let pose;
+    try {
+      pose = modele.detectForVideo(image, maintenant).landmarks[0];
+    } catch (cause) {
+      console.error('[seance] detection en echec', cause);
+      if (boucle.current !== null) cancelAnimationFrame(boucle.current);
+      boucle.current = null;
+      setErreur('L’analyse de l’image a échoué. Rechargez la page puis réessayez.');
+      return;
+    }
+
+    // `trace` : ce que l'on dessine. `mesure` : ce qui sert aux angles.
+    let trace: PointsProfil | null = null;
+    const mesure: PointsProfil = {};
     if (pose) {
       // Le cote filme est celui dont les six points sont le mieux vus.
-      const visibilite = (cote: keyof typeof POINTS_COTE) =>
-        Object.values(POINTS_COTE[cote]).map((indice) => pose[indice]?.visibility ?? 0);
-      const somme = (liste: number[]) => liste.reduce((total, valeur) => total + valeur, 0);
-      const cote = somme(visibilite('gauche')) >= somme(visibilite('droit')) ? 'gauche' : 'droit';
+      const score = (cote: 'gauche' | 'droit') =>
+        NOMS_POINTS.reduce(
+          (total, nom) => total + (pose[POINTS_COTE[cote][nom]]?.visibility ?? 0),
+          0
+        );
+      const indices = POINTS_COTE[score('gauche') >= score('droit') ? 'gauche' : 'droit'];
 
-      if (Math.min(...visibilite(cote)) >= VISIBILITE_MIN) {
-        const indices = POINTS_COTE[cote];
-        const enPixels = (indice: number) => ({
-          x: pose[indice].x * image.videoWidth,
-          y: pose[indice].y * image.videoHeight,
-        });
-        points = {
-          epaule: enPixels(indices.epaule),
-          coude: enPixels(indices.coude),
-          poignet: enPixels(indices.poignet),
-          hanche: enPixels(indices.hanche),
-          genou: enPixels(indices.genou),
-          cheville: enPixels(indices.cheville),
-        };
+      trace = {};
+      for (const nom of NOMS_POINTS) {
+        const point = pose[indices[nom]];
+        if (!point) continue;
+        const visibilite = point.visibility ?? 0;
+        const enPixels = { x: point.x * image.videoWidth, y: point.y * image.videoHeight };
+        if (visibilite >= VISIBILITE_TRACE) trace[nom] = enPixels;
+        if (visibilite >= VISIBILITE_MESURE) mesure[nom] = enPixels;
       }
     }
 
-    if (points) {
-      malVuDepuis.current = null;
-      suivi.current.ajouter(maintenant, calculerAngles(points));
-      setInstallation('correcte');
+    const angles = calculerAngles(mesure);
+    suivi.current.ajouter(maintenant, angles);
+
+    if (!pose) {
+      sansPoseDepuis.current ??= maintenant;
+      if (maintenant - sansPoseDepuis.current >= DELAI_ALERTE_MS) {
+        installationCourante.current = 'personne';
+      }
     } else {
-      malVuDepuis.current ??= maintenant;
-      if (maintenant - malVuDepuis.current >= DELAI_ALERTE_MS) setInstallation('mal-placee');
+      sansPoseDepuis.current = null;
+      installationCourante.current =
+        Object.keys(angles).length === ARTICULATIONS.length ? 'correcte' : 'partielle';
     }
-    dessiner(points);
+    dessiner(trace);
 
     if (maintenant - dernierTexte.current >= PERIODE_TEXTE_MS) {
       dernierTexte.current = maintenant;
@@ -306,8 +341,9 @@ export default function SeanceCapture({
     if (adresseFichier.current) URL.revokeObjectURL(adresseFichier.current);
     adresseFichier.current = null;
 
-    dernierTemps.current = -1;
-    malVuDepuis.current = null;
+    derniereAnalyse.current = 0;
+    sansPoseDepuis.current = null;
+    installationCourante.current = 'attente';
     dessiner(null);
     setEtat('inactif');
     setSource(null);
@@ -323,10 +359,11 @@ export default function SeanceCapture({
 
       // Une nouvelle prise repart d'une fenetre vide.
       suivi.current.vider();
-      valeurs.current = null;
+      valeurs.current = {};
       horsFourchette.current = new Set();
       candidat.current = { cle: null, depuis: 0 };
-      setConstats(null);
+      setConstats([]);
+      setComplet(false);
       setConsigne(null);
 
       const image = video.current;
@@ -352,6 +389,7 @@ export default function SeanceCapture({
         setEtat('actif');
         boucle.current = requestAnimationFrame(analyser);
       } catch (cause) {
+        console.error('[seance] demarrage en echec', cause);
         arreter();
         const nom = cause instanceof DOMException ? cause.name : '';
         setErreur(
@@ -359,9 +397,11 @@ export default function SeanceCapture({
             ? 'Accès à la caméra refusé. Autorisez-la dans le navigateur, ou importez une vidéo.'
             : nom === 'NotFoundError'
               ? 'Aucune caméra détectée sur cet appareil. Vous pouvez importer une vidéo.'
-              : nouvelleSource === 'fichier'
-                ? 'Cette vidéo ne peut pas être lue par le navigateur. Essayez un fichier MP4.'
-                : 'La séance n’a pas pu démarrer. Rechargez la page puis réessayez.'
+              : nom === 'NotReadableError'
+                ? 'La caméra est déjà utilisée par une autre application. Fermez-la puis réessayez.'
+                : nouvelleSource === 'fichier'
+                  ? 'Cette vidéo ne peut pas être lue par le navigateur. Essayez un fichier MP4.'
+                  : 'La séance n’a pas pu démarrer. Rechargez la page puis réessayez.'
         );
       }
     },
@@ -375,11 +415,11 @@ export default function SeanceCapture({
       detecteur.current?.close();
       detecteur.current = null;
     };
-  }, []);
+  }, [arreter]);
 
   const enregistrer = () => {
     const jugees = valeurs.current;
-    if (!jugees) return;
+    if (!estComplet(jugees)) return;
     setErreur(null);
     demarrerEnvoi(async () => {
       const retour = await actionEnregistrerSeance(contexte.etudeId, jugees);
@@ -388,7 +428,9 @@ export default function SeanceCapture({
   };
 
   const actif = etat === 'actif';
-  const mesuresPretes = constats !== null;
+  const manquants = ARTICULATIONS.filter(
+    (articulation) => !constats.some((constat) => constat.articulation === articulation)
+  );
 
   return (
     <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,1fr)]">
@@ -405,7 +447,7 @@ export default function SeanceCapture({
             ref={video}
             muted
             playsInline
-            className={`block w-full ${etat === 'inactif' ? 'aspect-video' : 'h-auto'}`}
+            className={`block w-full ${actif ? 'h-auto' : 'aspect-video'}`}
           />
           <canvas
             ref={canvas}
@@ -413,7 +455,7 @@ export default function SeanceCapture({
             className="pointer-events-none absolute inset-0 h-full w-full"
           />
 
-          {etat !== 'actif' && (
+          {!actif && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
               <p className="m-0 max-w-[420px] text-[15px] leading-[1.6] text-white">
                 {etat === 'chargement'
@@ -434,11 +476,7 @@ export default function SeanceCapture({
             </button>
           ) : (
             <>
-              <button
-                type="button"
-                onClick={() => demarrer('camera')}
-                className={BOUTON_CONTOUR}
-              >
+              <button type="button" onClick={() => demarrer('camera')} className={BOUTON_CONTOUR}>
                 <Camera size={17} weight="regular" />
                 Utiliser la caméra
               </button>
@@ -522,7 +560,9 @@ export default function SeanceCapture({
           <p
             role="status"
             className={`m-0 mt-4 text-[14px] leading-[1.5] ${
-              installation === 'mal-placee' ? 'font-semibold text-rouge-texte' : 'text-texte-doux'
+              actif && (installation === 'personne' || installation === 'partielle')
+                ? 'font-semibold text-rouge-texte'
+                : 'text-texte-doux'
             }`}
           >
             {actif ? MESSAGES_INSTALLATION[installation] : 'Séance à l’arrêt.'}
@@ -544,7 +584,7 @@ export default function SeanceCapture({
             </thead>
             <tbody>
               {ARTICULATIONS.map((articulation) => {
-                const constat = constats?.find((c) => c.articulation === articulation);
+                const constat = constats.find((c) => c.articulation === articulation);
                 const plage = seance.plages[articulation];
                 return (
                   <tr key={articulation} className="border-b border-ligne-douce last:border-b-0">
@@ -555,7 +595,11 @@ export default function SeanceCapture({
                           constat ? TON_STATUT[constat.statut] : 'text-gris'
                         }`}
                       >
-                        {constat ? LIBELLES_MESURE[constat.statut] : 'En attente'}
+                        {constat
+                          ? LIBELLES_MESURE[constat.statut]
+                          : actif
+                            ? `À voir : ${ZONE_REQUISE[articulation]}`
+                            : 'En attente'}
                       </span>
                     </th>
                     <td
@@ -597,9 +641,11 @@ export default function SeanceCapture({
               </>
             ) : (
               <p className="m-0 text-[14.5px] leading-[1.6] text-texte-doux">
-                {mesuresPretes
-                  ? 'Tous les angles sont dans leur fourchette.'
-                  : 'La première consigne apparaît après quelques tours de pédale.'}
+                {constats.length === 0
+                  ? 'La première consigne apparaît après quelques tours de pédale.'
+                  : complet
+                    ? 'Tous les angles sont dans leur fourchette.'
+                    : 'Aucun écart sur les angles mesurés pour l’instant.'}
               </p>
             )}
           </div>
@@ -614,12 +660,17 @@ export default function SeanceCapture({
           <button
             type="button"
             onClick={enregistrer}
-            disabled={!mesuresPretes || envoi}
+            disabled={!complet || envoi}
             className={BOUTON_PRIMAIRE}
           >
             <FloppyDisk size={18} weight="regular" />
             {envoi ? 'Enregistrement…' : 'Enregistrer la séance'}
           </button>
+          {!complet && constats.length > 0 && (
+            <p className={MESSAGE_INFO}>
+              Il manque encore : {manquants.map((a) => LIBELLES_JOINT[a].toLowerCase()).join(', ')}.
+            </p>
+          )}
           <p className="m-0 text-[13px] leading-[1.5] text-gris">
             L’enregistrement termine l’étude avec les mesures affichées. Outil d’aide au réglage, ne
             constitue pas un avis médical.

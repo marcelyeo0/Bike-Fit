@@ -4,7 +4,12 @@
  *
  * Lance avec : npm run biomeca:verify
  */
-import { SuiviAngles, calculerAngle, calculerAngles } from '../src/lib/biomeca/angles';
+import {
+  SuiviAngles,
+  calculerAngle,
+  calculerAngles,
+  estComplet,
+} from '../src/lib/biomeca/angles';
 import { estimerCadre, estimerHauteurSelle } from '../src/lib/biomeca/cadre';
 import {
   decalageMorphologique,
@@ -59,17 +64,20 @@ verifier(
     cheville: { x: 200, y: 300 },
   });
   verifier(
-    proche(angles.KNEE, 90) && proche(angles.ELBOW, 180),
+    proche(angles.KNEE ?? 0, 90) && proche(angles.ELBOW ?? 0, 180),
     'genou et coude sur un profil connu'
   );
   verifier(
-    proche(angles.HIP, 90) && proche(angles.SHOULDER, 90),
+    proche(angles.HIP ?? 0, 90) && proche(angles.SHOULDER ?? 0, 90),
     'hanche et epaule sur un profil connu'
   );
 }
 {
   const suivi = new SuiviAngles(6000);
-  verifier(suivi.valeursJugees() === null, 'aucune valeur jugee sur une fenetre vide');
+  verifier(
+    Object.keys(suivi.valeursJugees()).length === 0,
+    'aucune valeur jugee sur une fenetre vide'
+  );
   // Un pedalage simule : le genou oscille de 70 a 146°, la hanche de 48 a 95°.
   for (let image = 0; image < 180; image += 1) {
     const phase = Math.sin((image / 30) * Math.PI * 2);
@@ -82,21 +90,40 @@ verifier(
   }
   const jugees = suivi.valeursJugees();
   verifier(
-    jugees !== null && jugees.KNEE > 143 && jugees.KNEE <= 146,
+    estComplet(jugees) && jugees.KNEE > 143 && jugees.KNEE <= 146,
     'genou : extension maximale retenue'
   );
   verifier(
-    jugees !== null && jugees.HIP >= 48 && jugees.HIP < 51,
+    estComplet(jugees) && jugees.HIP >= 48 && jugees.HIP < 51,
     'hanche : angle le plus ferme retenu'
   );
   verifier(
-    jugees !== null && proche(jugees.ELBOW, 155) && proche(jugees.SHOULDER, 90),
+    estComplet(jugees) && proche(jugees.ELBOW, 155) && proche(jugees.SHOULDER, 90),
     'coude et epaule : moyenne'
   );
   suivi.ajouter(999_999, { KNEE: 120, HIP: 60, ELBOW: 150, SHOULDER: 90 });
-  verifier(suivi.taille === 1, 'la fenetre glissante oublie les images anciennes');
-  suivi.ajouter(1_000_000, { KNEE: Number.NaN, HIP: 60, ELBOW: 150, SHOULDER: 90 });
-  verifier(suivi.taille === 1, 'une image a angle invalide est ignoree');
+  verifier(suivi.taille('KNEE') === 1, 'la fenetre glissante oublie les images anciennes');
+  suivi.ajouter(1_000_000, { KNEE: Number.NaN, HIP: 60 });
+  verifier(
+    suivi.taille('KNEE') === 1 && suivi.taille('HIP') === 2 && suivi.taille('ELBOW') === 1,
+    'chaque articulation a sa serie : un angle absent ne bloque pas les autres'
+  );
+
+  const partiel = new SuiviAngles(6000);
+  for (let image = 0; image < 40; image += 1) partiel.ajouter(image * 33, { ELBOW: 150 });
+  const jugeesPartielles = partiel.valeursJugees();
+  verifier(
+    jugeesPartielles.ELBOW === 150 && jugeesPartielles.KNEE === undefined,
+    'haut du corps seul : le coude est juge, pas le genou'
+  );
+  verifier(!estComplet(jugeesPartielles), 'mesure partielle : pas enregistrable');
+
+  const lent = new SuiviAngles();
+  for (let image = 0; image < 14; image += 1) lent.ajouter(image * 500, { ELBOW: 150 });
+  verifier(
+    lent.valeursJugees().ELBOW === 150,
+    'detection lente (2 images par seconde) : l angle est quand meme juge'
+  );
 }
 
 console.log('Fourchettes');
@@ -214,6 +241,19 @@ console.log('Consignes');
   );
   const consignes = consignesParPriorite(constats);
   verifier(constats.length === 4, 'un constat par articulation');
+  verifier(
+    etablirConstats({ ELBOW: 170 }, plages, {}, 84).length === 1,
+    'mesure partielle : un constat par angle juge'
+  );
+  const hautDuCorps = calculerAngles({
+    epaule: { x: 100, y: 100 },
+    coude: { x: 200, y: 100 },
+    poignet: { x: 300, y: 100 },
+  });
+  verifier(
+    proche(hautDuCorps.ELBOW ?? 0, 180) && hautDuCorps.KNEE === undefined,
+    'points manquants : seuls les angles calculables sont rendus'
+  );
   verifier(
     consignes.length === 2 && consignes[0].articulation === 'KNEE',
     'la selle passe avant le poste de pilotage'

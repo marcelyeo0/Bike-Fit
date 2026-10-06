@@ -101,18 +101,22 @@ export type Constat = {
  * articulation, dans l'ordre d'affichage (`ARTICULATIONS`).
  */
 export function etablirConstats(
-  valeurs: Angles,
+  valeurs: Partial<Angles>,
   plages: Plages,
   conseils: Conseils,
   entrejambeCm: number | null
 ): Constat[] {
-  return ARTICULATIONS.map((articulation) => {
-    const valeur = Math.round(valeurs[articulation] * 10) / 10;
+  // Un angle pas encore juge (points mal vus) n'a pas de constat.
+  return ARTICULATIONS.flatMap((articulation): Constat[] => {
+    const brute = valeurs[articulation];
+    if (brute === undefined) return [];
+
+    const valeur = Math.round(brute * 10) / 10;
     const plage = plages[articulation];
     const statut = statutMesure(valeur, plage);
 
     if (statut !== 'OUT') {
-      return { articulation, valeur, plage, statut, sens: null, consigne: null };
+      return [{ articulation, valeur, plage, statut, sens: null, consigne: null }];
     }
 
     const sens: Sens = valeur > plage.max ? 'haut' : 'bas';
@@ -125,7 +129,7 @@ export function etablirConstats(
       consigne += ` Correction estimée : environ ${correctionSelleMm(valeur, plage, entrejambeCm)} mm.`;
     }
 
-    return { articulation, valeur, plage, statut, sens, consigne };
+    return [{ articulation, valeur, plage, statut, sens, consigne }];
   });
 }
 
