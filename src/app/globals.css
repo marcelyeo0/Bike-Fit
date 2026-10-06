@@ -75,3 +75,29 @@
     transform: none;
   }
 }
+
+/* Impression : format A4 pour le compte rendu d'une etude. La coque du
+   dashboard est retiree par des classes `print:` ; ici ne vivent que les
+   regles qui ne s'expriment pas en utilitaires. */
+@page {
+  size: A4;
+  margin: 16mm 15mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  /* Les aplats (pastilles de statut, filets) doivent sortir a l'encre. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Un bloc de mesure ou une recommandation ne se coupe pas entre deux pages. */
+  .sans-coupure {
+    break-inside: avoid;
+  }
+}

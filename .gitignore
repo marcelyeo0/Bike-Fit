@@ -34,3 +34,6 @@ next-env.d.ts
 main.py
 test_core.py
 frontend/
+
+# cache incremental de TypeScript
+*.tsbuildinfo

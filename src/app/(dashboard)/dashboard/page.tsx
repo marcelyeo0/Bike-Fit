@@ -12,6 +12,7 @@ import BandeauAbonnement from './_composants/BandeauAbonnement';
 import BoutonNouvelleEtude from './_composants/BoutonNouvelleEtude';
 import CarteEtude from './_composants/CarteEtude';
 import CarteStat from './_composants/CarteStat';
+import { BOUTON_CONTOUR, SURTITRE } from '../_composants/classes';
 
 export const metadata: Metadata = {
   title: 'Tableau de bord - Axio',
@@ -54,7 +55,7 @@ export default async function DashboardPage() {
           <h1 className="m-0 font-display text-titre-sm text-encre">Tableau de bord</h1>
           <p className="m-0 mt-3 text-[15.5px] leading-[1.6] text-texte-doux">
             {prenom ? `Bonjour ${prenom}. ` : ''}
-            Vos analyses posturales, vos clients et les écarts relevés.
+            Vos études de position, vos clients et les écarts relevés.
           </p>
         </div>
 
@@ -86,9 +87,17 @@ export default async function DashboardPage() {
       </section>
 
       <section aria-label="Études récentes" className="mt-12">
-        <h2 className="m-0 font-condensed text-[12px] uppercase tracking-[.16em] text-gris">
-          {vide ? 'Exemple de rapport' : 'Études récentes'}
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className={SURTITRE}>{vide ? 'Exemple de rapport' : 'Études récentes'}</h2>
+          {!vide && (
+            <Link
+              href="/dashboard/etudes"
+              className="text-[13.5px] font-medium text-gris underline underline-offset-2 transition-colors hover:text-encre"
+            >
+              Toutes les études
+            </Link>
+          )}
+        </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {vide ? (
@@ -103,8 +112,8 @@ export default async function DashboardPage() {
                     Votre première étude
                   </h3>
                   <p className="m-0 mt-2 text-[14px] leading-[1.6] text-texte-doux">
-                    Filmez une séance, Axio mesure les angles et rédige les recommandations de
-                    réglage. Aucune vidéo n’est conservée.
+                    Créez un client, ouvrez son étude : Axio mesure les angles et propose les
+                    réglages. Aucune vidéo n’est conservée.
                   </p>
                 </div>
 
@@ -113,7 +122,7 @@ export default async function DashboardPage() {
                     ici, et la server action revalide de toute facon. */}
                 <Link
                   href="/dashboard/etudes/nouvelle"
-                  className="mt-6 inline-flex h-[42px] w-fit items-center justify-center rounded-full border border-encre px-[18px] text-sm font-semibold text-encre transition-colors duration-300 ease-doux hover:bg-encre hover:text-white"
+                  className={`${BOUTON_CONTOUR} mt-6`}
                 >
                   Créer une étude
                 </Link>

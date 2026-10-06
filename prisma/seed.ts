@@ -1,6 +1,14 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
-import { Joint, MeasurementStatus, Plan, Role, StudyStatus } from '../src/generated/prisma/enums';
+import {
+  Joint,
+  MeasurementStatus,
+  Objectif,
+  Plan,
+  Pratique,
+  Role,
+  StudyStatus,
+} from '../src/generated/prisma/enums';
 
 /**
  * Jeu de demonstration.
@@ -11,6 +19,9 @@ import { Joint, MeasurementStatus, Plan, Role, StudyStatus } from '../src/genera
  *
  * Les mesures et recommandations n'ont pas de cle naturelle : on les supprime
  * puis on les recree, plutot que de tenter un upsert ligne a ligne.
+ *
+ * Aucune identite : les clients de demonstration sont des codes, comme ceux
+ * d'un atelier reel. Ni nom, ni contact, ni texte libre.
  */
 
 const url = process.env.DATABASE_URL;
@@ -23,9 +34,13 @@ const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: url }) }
 // Identifiants stables : ils rendent le seed rejouable et permettent de repérer
 // la donnee de demonstration d'un coup d'oeil en base.
 const ID_UTILISATEUR = 'demo-user';
-const ID_CLIENT_A = 'demo-client-lefevre';
-const ID_CLIENT_B = 'demo-client-nardi';
 const ID_ETUDE = 'demo-study';
+
+// Les clients se retrouvent par leur code (unique par atelier), pas par un
+// identifiant fixe : une base seedee avant la pseudonymisation porte deja ces
+// deux fiches sous d'autres identifiants, renumerotees par la migration.
+const CODE_CLIENT_A = 'AX-0001';
+const CODE_CLIENT_B = 'AX-0002';
 
 /**
  * Mesures de l'etude de demonstration.
@@ -67,7 +82,7 @@ const MESURES = [
 
 /**
  * Une recommandation par ecart constate, formulee comme un reglage chiffre.
- * Conseil de reglage, jamais de diagnostic medical.
+ * Vocabulaire d'atelier uniquement : reglage, position, fourchette.
  */
 const RECOMMANDATIONS = [
   {
@@ -84,7 +99,7 @@ const RECOMMANDATIONS = [
     text:
       "Buste trop ramasse : l'angle epaule tombe a 73 degres pour une cible de 85 a 100 degres. " +
       'Allonger la potence de 10 a 20 mm, ou reculer la selle de 5 a 10 mm si le recul ' +
-      'genou / axe de pedale le permet. Traiter la selle en premier : elle conditionne le reste.',
+      'genou / axe de pedale le permet. Regler la selle en premier : elle conditionne le reste.',
   },
 ];
 
@@ -99,40 +114,52 @@ async function main() {
       name: 'Atelier de demonstration',
       role: Role.USER,
       plan: Plan.ATELIER,
+      dernierNumeroClient: 2,
     },
   });
 
   const clientA = await db.client.upsert({
-    where: { id: ID_CLIENT_A },
+    where: { userId_code: { userId: utilisateur.id, code: CODE_CLIENT_A } },
     update: {},
     create: {
-      id: ID_CLIENT_A,
       userId: utilisateur.id,
-      nom: 'Camille Lefevre',
-      email: 'camille.lefevre@example.com',
-      notes: 'Route, 8 h par semaine. Gene au genou droit apres 2 h de selle.',
+      code: CODE_CLIENT_A,
+      tailleCm: 178,
+      entrejambeCm: 84.5,
     },
   });
 
   await db.client.upsert({
-    where: { id: ID_CLIENT_B },
+    where: { userId_code: { userId: utilisateur.id, code: CODE_CLIENT_B } },
     update: {},
     create: {
-      id: ID_CLIENT_B,
       userId: utilisateur.id,
-      nom: 'Bruno Nardi',
-      email: null,
-      notes: 'Gravel, sorties longues. Premiere venue, aucun reglage anterieur connu.',
+      code: CODE_CLIENT_B,
+      tailleCm: 171,
+      entrejambeCm: 80,
     },
+  });
+
+  // Le compteur de codes ne doit jamais etre en retard sur les fiches posees
+  // ici, sinon le prochain client de cet atelier tirerait un code deja pris.
+  await db.user.updateMany({
+    where: { id: utilisateur.id, dernierNumeroClient: { lt: 2 } },
+    data: { dernierNumeroClient: 2 },
   });
 
   await db.study.upsert({
     where: { id: ID_ETUDE },
-    update: { status: StudyStatus.COMPLETED },
+    update: {
+      status: StudyStatus.COMPLETED,
+      pratique: Pratique.ROUTE,
+      objectif: Objectif.CONFORT,
+    },
     create: {
       id: ID_ETUDE,
       userId: utilisateur.id,
       clientId: clientA.id,
+      pratique: Pratique.ROUTE,
+      objectif: Objectif.CONFORT,
       status: StudyStatus.COMPLETED,
       isDemo: true,
       completedAt: new Date(),
@@ -153,7 +180,7 @@ async function main() {
 
   const horsCible = MESURES.filter((m) => m.status === MeasurementStatus.OUT).length;
   console.log(
-    `Seed termine : 1 utilisateur, 2 clients, 1 etude de demonstration ` +
+    `Seed termine : 1 utilisateur, 2 clients (${CODE_CLIENT_A}, ${CODE_CLIENT_B}), 1 etude de demonstration ` +
       `(${MESURES.length} mesures dont ${horsCible} hors cible, ${RECOMMANDATIONS.length} recommandations).`
   );
 }

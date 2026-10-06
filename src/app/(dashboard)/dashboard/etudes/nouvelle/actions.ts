@@ -1,10 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { requireUser } from '../../../../../lib/auth';
 import { canCreateStudy } from '../../../../../lib/access';
-import { db } from '../../../../../lib/db';
+import { lireIdentifiant, lireObjectif, lirePratique } from '../../../../../lib/saisie';
+import { creerEtude } from '../../../../../lib/requetes/etudes';
 
 /**
  * Creation d'une etude.
@@ -12,12 +13,13 @@ import { db } from '../../../../../lib/db';
  * GARDE : une server action est un endpoint HTTP public. Le bouton desactive
  * et la modale du dashboard n'empechent rien — le seul controle qui compte est
  * celui d'ici. D'ou l'ordre : identite (`requireUser`, jamais `currentUser`),
- * puis droit (`canCreateStudy`), puis seulement l'ecriture.
+ * puis droit (`canCreateStudy`), puis appartenance du client, puis seulement
+ * l'ecriture.
  *
- * En cas de refus on renvoie sur le formulaire, qui reaffiche le motif exact :
- * pas de message d'erreur duplique ici.
+ * En cas de refus de droit on renvoie sur le formulaire, qui reaffiche le
+ * motif exact : pas de message d'erreur duplique ici.
  */
-export async function creerEtude(donnees: FormData): Promise<void> {
+export async function actionCreerEtude(donnees: FormData): Promise<void> {
   const utilisateur = await requireUser();
 
   const autorisation = await canCreateStudy(utilisateur);
@@ -28,29 +30,25 @@ export async function creerEtude(donnees: FormData): Promise<void> {
     redirect('/dashboard/etudes/nouvelle');
   }
 
-  const clientId = donnees.get('clientId');
-  if (typeof clientId !== 'string' || clientId.length === 0) {
-    redirect('/dashboard/etudes/nouvelle?erreur=client');
+  // Forme des champs : un formulaire incomplet revient avec un message.
+  const clientId = lireIdentifiant(donnees.get('clientId'));
+  const pratique = lirePratique(donnees.get('pratique'));
+  const objectif = lireObjectif(donnees.get('objectif'));
+  if (!clientId || !pratique || !objectif) {
+    redirect('/dashboard/etudes/nouvelle?erreur=champs');
   }
 
   // Le clientId vient du navigateur : rien ne garantit qu'il appartient a
-  // l'utilisateur. Sans cette verification, une etude pourrait etre rattachee
-  // a la fiche client d'un autre atelier.
-  const clientLegitime = await db.client.count({
-    where: { id: clientId, userId: utilisateur.id },
-  });
-  if (clientLegitime === 0) {
+  // l'atelier. `creerEtude` le verifie avec le `userId` et renvoie null sinon.
+  // Un client d'un autre atelier donne un 404, comme s'il n'existait pas.
+  const etude = await creerEtude(utilisateur.id, { clientId, pratique, objectif });
+  if (!etude) {
     console.warn(`[access] client ${clientId} hors perimetre de ${utilisateur.id}`);
-    redirect('/dashboard/etudes/nouvelle?erreur=client');
+    notFound();
   }
-
-  const etude = await db.study.create({
-    data: { userId: utilisateur.id, clientId },
-    select: { id: true },
-  });
 
   revalidatePath('/dashboard');
   console.info(`[access] etude ${etude.id} creee pour ${utilisateur.id} (${autorisation.motif})`);
 
-  redirect('/dashboard');
+  redirect(`/dashboard/etudes/${etude.id}?creee=1`);
 }

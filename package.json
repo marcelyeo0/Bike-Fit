@@ -2,7 +2,7 @@
   "name": "axio-web",
   "version": "0.1.0",
   "private": true,
-  "description": "Site vitrine d'Axio — analyse posturale cycliste en temps reel.",
+  "description": "Axio — analyse de position cycliste pour les ateliers velo (site et dashboard).",
   "dependencies": {
     "@clerk/localizations": "^4.15.8",
     "@clerk/nextjs": "^7.8.3",
@@ -38,6 +38,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
-    "db:verify": "tsx scripts/verify-prisma.ts"
+    "db:verify": "tsx scripts/verify-prisma.ts",
+    "db:deploy": "prisma migrate deploy",
+    "db:isolation": "tsx --conditions=react-server scripts/verify-isolation.ts"
   }
 }

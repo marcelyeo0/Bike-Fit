@@ -54,36 +54,70 @@ enum MeasurementStatus {
   OUT
 }
 
+/// La pratique pour laquelle le velo est regle. Les fourchettes cibles en
+/// dependent.
+enum Pratique {
+  ROUTE
+  GRAVEL
+  CHRONO
+}
+
+/// Ce que le cycliste attend du reglage.
+enum Objectif {
+  CONFORT
+  MIXTE
+  AERO
+}
+
 /// Le velociste. `clerkId` fait le lien avec la session Clerk ; c'est la seule
 /// cle par laquelle le code serveur retrouve un utilisateur.
 model User {
-  id                 String             @id @default(cuid())
-  clerkId            String             @unique
-  email              String             @unique
-  name               String?
-  role               Role               @default(USER)
-  stripeCustomerId   String?            @unique
-  subscriptionStatus SubscriptionStatus @default(NONE)
-  plan               Plan               @default(FREE)
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  id                  String             @id @default(cuid())
+  clerkId             String             @unique
+  email               String             @unique
+  name                String?
+  role                Role               @default(USER)
+  stripeCustomerId    String?            @unique
+  subscriptionStatus  SubscriptionStatus @default(NONE)
+  plan                Plan               @default(FREE)
+  /// Dernier numero de code client attribue par cet atelier. Incremente dans
+  /// la meme transaction que la creation du client : l'UPDATE verrouille la
+  /// ligne, deux creations simultanees ne peuvent donc pas tirer le meme
+  /// numero. Jamais decremente — un code supprime n'est pas reattribue.
+  dernierNumeroClient Int                @default(0)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   clients Client[]
   studies Study[]
 }
 
 /// Le client final du velociste — la personne qui vient se faire regler son velo.
+///
+/// Regle produit : le serveur ne connait PAS l'identite du cycliste. Ni nom,
+/// ni e-mail, ni telephone, ni texte libre (un champ de commentaire finit
+/// toujours par contenir un nom ou une information de sante). Le client n'est
+/// qu'un code propre a l'atelier ; la correspondance code <-> personne reste en
+/// boutique.
 model Client {
-  id        String   @id @default(cuid())
-  userId    String
-  nom       String
-  email     String?
-  notes     String?
+  id     String @id @default(cuid())
+  userId String
+
+  /// Pseudonyme, format `AX-0001`. Sequentiel par atelier, genere cote
+  /// serveur (voir `User.dernierNumeroClient`), jamais saisi.
+  code String
+
+  /// Mensurations saisies a la main, en centimetres. Optionnelles.
+  tailleCm     Float?
+  entrejambeCm Float?
+
   createdAt DateTime @default(now())
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   studies Study[]
 
+  /// Seconde barriere contre les doublons de code, apres le compteur.
+  @@unique([userId, code])
   @@index([userId])
 }
 
@@ -105,6 +139,12 @@ model Study {
   /// Libelle de repli quand `clientId` est nul. Non expose dans l'interface
   /// pour l'instant : il n'existe encore aucun chemin de creation sans client.
   titre String?
+
+  /// Nullables : les etudes creees avant l'ajout de ces colonnes n'ont pas de
+  /// valeur, et en inventer une fausserait leur lecture. Toute nouvelle etude
+  /// les renseigne — la server action de creation les exige.
+  pratique Pratique?
+  objectif Objectif?
 
   status      StudyStatus @default(DRAFT)
   isDemo      Boolean     @default(false)

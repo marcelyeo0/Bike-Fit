@@ -1,6 +1,12 @@
 import 'server-only';
 import { db } from '../db';
-import type { Joint, MeasurementStatus, StudyStatus } from '../../generated/prisma/enums';
+import type {
+  Joint,
+  MeasurementStatus,
+  Objectif,
+  Pratique,
+  StudyStatus,
+} from '../../generated/prisma/enums';
 
 /**
  * Lectures du tableau de bord.
@@ -69,8 +75,14 @@ export type EtudeResumee = {
   createdAt: Date;
   completedAt: Date | null;
   titre: string | null;
-  /** Nul tant qu'aucune fiche client n'est rattachee — voir `titre`. */
-  client: { nom: string } | null;
+  /** Nuls sur les etudes anterieures a l'ajout de ces deux champs. */
+  pratique: Pratique | null;
+  objectif: Objectif | null;
+  /**
+   * Nul tant qu'aucune fiche client n'est rattachee — voir `titre`. Le client
+   * n'est qu'un code : le serveur ne connait pas l'identite du cycliste.
+   */
+  client: { code: string } | null;
   measurements: {
     joint: Joint;
     value: number;
@@ -80,14 +92,16 @@ export type EtudeResumee = {
   }[];
 };
 
-const SELECTION_ETUDE = {
+export const SELECTION_ETUDE = {
   id: true,
   status: true,
   isDemo: true,
   createdAt: true,
   completedAt: true,
   titre: true,
-  client: { select: { nom: true } },
+  pratique: true,
+  objectif: true,
+  client: { select: { code: true } },
   measurements: {
     select: { joint: true, value: true, targetMin: true, targetMax: true, status: true },
   },
@@ -117,14 +131,5 @@ export async function lireEtudeDemo(): Promise<EtudeResumee | null> {
     where: { isDemo: true },
     orderBy: { createdAt: 'desc' },
     select: SELECTION_ETUDE,
-  });
-}
-
-/** Le carnet d'adresses de CET utilisateur, pour le selecteur de client. */
-export async function lireClients(userId: string): Promise<{ id: string; nom: string }[]> {
-  return db.client.findMany({
-    where: { userId },
-    orderBy: { nom: 'asc' },
-    select: { id: true, nom: true },
   });
 }

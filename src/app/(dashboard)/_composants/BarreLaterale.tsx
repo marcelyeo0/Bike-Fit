@@ -13,6 +13,7 @@ import {
 } from '@phosphor-icons/react';
 import { UserButton } from '@clerk/nextjs';
 import type { Plan } from '../../../generated/prisma/enums';
+import { LIBELLES_PLAN } from '../../../lib/libelles';
 
 /**
  * Coque de navigation du dashboard.
@@ -28,13 +29,6 @@ const LIENS = [
   { href: '/dashboard/clients', label: 'Clients', Icone: Users },
   { href: '/dashboard/parametres', label: 'Paramètres', Icone: GearSix },
 ];
-
-const LIBELLES_PLAN: Record<Plan, string> = {
-  FREE: 'Offre gratuite',
-  ESSENTIEL: 'Essentiel',
-  ATELIER: 'Atelier',
-  MULTI: 'Multi-sites',
-};
 
 const LARGEUR = 'w-[264px]';
 
@@ -102,7 +96,7 @@ export default function BarreLaterale({ plan }: { plan: Plan }) {
           <p className="m-0 mt-1 text-[14.5px] font-semibold text-encre">{LIBELLES_PLAN[plan]}</p>
           {plan === 'FREE' && (
             <Link
-              href="/#tarifs"
+              href="/pricing"
               className="mt-2 inline-block text-[13px] font-semibold text-rouge-texte underline underline-offset-2"
             >
               Passer à un plan supérieur
@@ -121,7 +115,7 @@ export default function BarreLaterale({ plan }: { plan: Plan }) {
   return (
     <>
       {/* Barre superieure mobile : porte le burger, sous 1024px seulement. */}
-      <header className="fixed inset-x-0 top-0 z-40 flex h-[64px] items-center justify-between border-b border-ligne bg-white px-5 lg:hidden">
+      <header className="fixed inset-x-0 top-0 z-40 flex h-[64px] items-center justify-between border-b border-ligne bg-white px-5 lg:hidden print:hidden">
         <Link href="/dashboard" className="font-display text-xl tracking-[.06em] text-encre">
           AXIO
         </Link>
@@ -142,7 +136,7 @@ export default function BarreLaterale({ plan }: { plan: Plan }) {
       {/* Tiroir mobile. Rendu seulement a l'ouverture : ferme, il ne doit pas
           rester dans l'ordre de tabulation. */}
       {ouvert && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 lg:hidden print:hidden">
           <button
             type="button"
             aria-label="Fermer le menu"
@@ -159,7 +153,7 @@ export default function BarreLaterale({ plan }: { plan: Plan }) {
 
       {/* Sidebar fixe, a partir de 1024px. */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 hidden ${LARGEUR} border-r border-ligne bg-white lg:block`}
+        className={`fixed inset-y-0 left-0 z-30 hidden ${LARGEUR} border-r border-ligne bg-white lg:block print:!hidden`}
       >
         {contenu}
       </aside>

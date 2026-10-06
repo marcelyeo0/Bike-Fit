@@ -38,14 +38,38 @@ async function main() {
   console.log('✅ Connected');
   console.log(`   ${utilisateurs} utilisateur(s), ${clients} client(s), ${etudes} etude(s).`);
 
+  // Regle produit : aucune colonne nominative ni texte libre sur "Client". On
+  // interroge le catalogue plutot que le client Prisma, qui ne verrait pas une
+  // colonne restee en base apres une migration manquee.
+  const interdites = await db.$queryRaw<{ column_name: string }[]>`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_schema = current_schema()
+      AND table_name = 'Client'
+      AND column_name IN ('nom', 'email', 'notes')
+  `;
+  if (interdites.length > 0) {
+    const noms = interdites.map((colonne) => colonne.column_name).join(', ');
+    throw new Error(`Colonnes nominatives encore presentes sur "Client" : ${noms}.`);
+  }
+
+  // Un code par client et par atelier, au format attendu.
+  const codes = await db.client.findMany({ select: { userId: true, code: true } });
+  const malFormes = codes.filter((client) => !/^AX-\d{4,}$/.test(client.code));
+  const distincts = new Set(codes.map((client) => `${client.userId}/${client.code}`));
+  if (malFormes.length > 0 || distincts.size !== codes.length) {
+    throw new Error('Codes clients mal formes ou en doublon.');
+  }
+  console.log(`   Clients pseudonymises : ${codes.length} code(s), aucun doublon.`);
+
   if (!demo) {
     console.log('   Aucune etude de demonstration — lancez `npm run seed`.');
     return;
   }
 
   // `client` est optionnel depuis que Study.clientId est nullable.
-  const sujet = demo.client?.nom ?? demo.titre ?? 'etude sans client';
-  console.log(`   Etude de demonstration pour ${sujet} (${demo.status}) :`);
+  const sujet = demo.client?.code ?? demo.titre ?? 'etude sans client';
+  const cadre = `${demo.pratique ?? 'pratique ?'} / ${demo.objectif ?? 'objectif ?'}`;
+  console.log(`   Etude de demonstration pour ${sujet} (${demo.status}, ${cadre}) :`);
   for (const m of demo.measurements) {
     const cible = `${m.targetMin}-${m.targetMax}`;
     console.log(

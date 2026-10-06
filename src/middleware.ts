@@ -1,4 +1,26 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import type { NextRequest } from 'next/server';
+
+/**
+ * L'URL telle que le navigateur l'a demandee.
+ *
+ * En serveur autonome (image Docker), `request.url` est reconstruite depuis
+ * la variable HOSTNAME du conteneur et vaut `http://0.0.0.0:3000/...` : un
+ * retour apres connexion vers cette adresse n'aboutit nulle part. On repart
+ * donc des en-tetes — `x-forwarded-*` poses par Caddy en production, `host`
+ * en acces direct.
+ */
+function urlPublique(request: NextRequest): string {
+  const premier = (valeur: string | null) => valeur?.split(',')[0]?.trim() || null;
+
+  const hote = premier(request.headers.get('x-forwarded-host')) ?? request.headers.get('host');
+  if (!hote) return request.url;
+
+  const protocole =
+    premier(request.headers.get('x-forwarded-proto')) ?? request.nextUrl.protocol.replace(':', '');
+
+  return `${protocole}://${hote}${request.nextUrl.pathname}${request.nextUrl.search}`;
+}
 
 /**
  * Seules ces routes sont protegees. Tout le reste (landing, pages d'auth,
@@ -30,7 +52,7 @@ export default clerkMiddleware(
     if (!userId) {
       // `returnBackUrl` devient le parametre `redirect_url` lu par <SignIn/>,
       // qui ramene le visiteur sur la page qu'il demandait.
-      return redirectToSignIn({ returnBackUrl: request.url });
+      return redirectToSignIn({ returnBackUrl: urlPublique(request) });
     }
   },
   {
