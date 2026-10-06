@@ -49,11 +49,16 @@ function exigerBaseLocale() {
 async function main() {
   exigerBaseLocale();
 
+  // Pas d'appel reseau dans ce script : sans cle, les fourchettes viennent de
+  // la table locale, et le resultat est le meme a chaque execution.
+  process.env.GEMINI_API_KEY = '';
+
   // Imports dynamiques : apres le controle ci-dessus, et apres dotenv.
   const { db } = await import('../src/lib/db');
   const clients = await import('../src/lib/requetes/clients');
   const etudes = await import('../src/lib/requetes/etudes');
   const exports = await import('../src/lib/requetes/export');
+  const plages = await import('../src/lib/requetes/plages');
   const { canCreateStudy } = await import('../src/lib/access');
 
   const nettoyer = () => db.user.deleteMany({ where: { id: { in: [ID_A, ID_B] } } });
@@ -210,6 +215,95 @@ async function main() {
         'la demonstration est toujours en base'
       );
     }
+
+    console.log('Seance');
+    const etudeB = await etudes.creerEtude(ID_B, {
+      clientId: clientB.id,
+      pratique: 'ROUTE',
+      objectif: 'MIXTE',
+    });
+    if (!etudeB) throw new Error('etude de B non creee');
+
+    verifier(
+      (await plages.ouvrirSeance(ID_A, etudeB.id)) === null,
+      'A ne peut pas ouvrir la seance d une etude de B'
+    );
+    const angles = { KNEE: 156, HIP: 52, ELBOW: 158, SHOULDER: 92 };
+    verifier(
+      (await etudes.enregistrerSeance(ID_A, etudeB.id, angles)) === false,
+      'A ne peut pas enregistrer la seance d une etude de B'
+    );
+
+    const contexte = await plages.ouvrirSeance(ID_B, etudeB.id);
+    verifier(
+      contexte !== null && contexte.seance.source === 'locale' && contexte.seance.morphologie,
+      'B ouvre sa seance : table locale, ajustee aux mensurations'
+    );
+    verifier(
+      contexte !== null && contexte.cadre === 'L' && contexte.hauteurSelleCm === 76.4,
+      `cadre et hauteur de selle estimes des mensurations (${contexte?.cadre}, ${contexte?.hauteurSelleCm} cm)`
+    );
+    const figees = await db.study.findUniqueOrThrow({
+      where: { id: etudeB.id },
+      select: { plagesSeance: true },
+    });
+    verifier(figees.plagesSeance !== null, 'les fourchettes sont figees sur l etude');
+
+    await clients.modifierMensurations(ID_B, clientB.id, { tailleCm: 180, entrejambeCm: 80 });
+    const apres = await db.study.findUniqueOrThrow({
+      where: { id: etudeB.id },
+      select: { plagesSeance: true },
+    });
+    verifier(
+      apres.plagesSeance === null,
+      'modifier les mensurations remet a zero les fourchettes du brouillon'
+    );
+    await clients.modifierMensurations(ID_B, clientB.id, { tailleCm: 180, entrejambeCm: 86.5 });
+
+    verifier(etudes.lireAngles({ KNEE: 156, HIP: 52, ELBOW: 158 }) === null, 'angles incomplets refuses');
+    verifier(
+      etudes.lireAngles({ KNEE: 999, HIP: 52, ELBOW: 158, SHOULDER: 92 }) === null,
+      'angle hors bornes refuse'
+    );
+
+    verifier(
+      (await etudes.enregistrerSeance(ID_B, etudeB.id, angles)) === true,
+      'B enregistre sa seance'
+    );
+    const terminee = await etudes.lireEtude(ID_B, etudeB.id);
+    verifier(
+      terminee?.status === 'COMPLETED' &&
+        terminee.measurements.length === 4 &&
+        terminee.cadreConseille === 'L',
+      'etude terminee : 4 mesures, taille de cadre figee'
+    );
+    const genou = terminee?.measurements.find((mesure) => mesure.joint === 'KNEE');
+    verifier(
+      genou?.status === 'OUT' && genou.targetMin === 140 && genou.targetMax === 150,
+      'statut et fourchette recalcules cote serveur'
+    );
+    verifier(
+      terminee?.recommendations.length === 1 &&
+        terminee.recommendations[0].joint === 'KNEE' &&
+        /Baisser la selle.*environ \d+ mm/.test(terminee.recommendations[0].text),
+      'une recommandation, chiffree, pour le seul angle hors fourchette'
+    );
+    verifier(
+      (await etudes.enregistrerSeance(ID_B, etudeB.id, angles)) === false,
+      'une etude terminee ne s enregistre pas deux fois'
+    );
+    verifier(
+      (await plages.ouvrirSeance(ID_B, etudeB.id)) === null,
+      'une etude terminee n ouvre plus de seance'
+    );
+    if (demo) {
+      verifier(
+        (await plages.ouvrirSeance(demo.userId, demo.id)) === null,
+        'la demonstration n ouvre pas de seance, meme pour son proprietaire'
+      );
+    }
+    // B repart sans etude pour le controle du droit de creation.
+    await etudes.supprimerEtude(ID_B, etudeB.id);
 
     console.log('Droit de creation');
     const atelierB = await db.user.findUniqueOrThrow({ where: { id: ID_B } });

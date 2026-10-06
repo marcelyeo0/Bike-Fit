@@ -8,6 +8,9 @@ import type {
   StudyStatus,
 } from '../../generated/prisma/enums';
 import { SELECTION_ETUDE, type EtudeResumee } from './dashboard';
+import { ARTICULATIONS, type Angles } from '../biomeca/angles';
+import { consignesParPriorite, etablirConstats } from '../biomeca/regles';
+import { ouvrirSeance } from './plages';
 
 /**
  * Lectures et ecritures des etudes.
@@ -64,6 +67,8 @@ export type EtudeDetaillee = {
   titre: string | null;
   pratique: Pratique | null;
   objectif: Objectif | null;
+  /** Taille de cadre estimee, figee a l'enregistrement de la seance. */
+  cadreConseille: string | null;
   client: { id: string; code: string } | null;
   measurements: {
     id: string;
@@ -102,6 +107,7 @@ export async function lireEtude(userId: string, etudeId: string): Promise<EtudeD
       titre: true,
       pratique: true,
       objectif: true,
+      cadreConseille: true,
       client: { select: { id: true, code: true } },
       measurements: {
         orderBy: { joint: 'asc' },
@@ -151,6 +157,84 @@ export async function creerEtude(
     },
     select: { id: true },
   });
+}
+
+/**
+ * Enregistre la seance d'une etude en brouillon de CET atelier, et la termine.
+ *
+ * Du navigateur ne viennent que les angles juges. Fourchettes, statuts,
+ * consignes et taille de cadre sont recalcules ici, a partir de ce qui a ete
+ * fige a l'ouverture de la seance (`ouvrirSeance`) : un corps de requete
+ * forge peut mentir sur un angle, pas sur ce que l'outil en conclut.
+ *
+ * Faux si l'etude n'est pas a l'atelier, n'est plus en brouillon ou est la
+ * demonstration. La transaction rend l'ecriture atomique, et le
+ * `updateMany` filtre sur le statut empeche un double enregistrement.
+ */
+export async function enregistrerSeance(
+  userId: string,
+  etudeId: string,
+  valeurs: Angles
+): Promise<boolean> {
+  const contexte = await ouvrirSeance(userId, etudeId);
+  if (!contexte) return false;
+
+  const constats = etablirConstats(
+    valeurs,
+    contexte.seance.plages,
+    contexte.seance.conseils,
+    contexte.entrejambeCm
+  );
+  const consignes = consignesParPriorite(constats);
+
+  return db.$transaction(async (transaction) => {
+    const { count } = await transaction.study.updateMany({
+      where: { id: etudeId, userId, isDemo: false, status: 'DRAFT' },
+      data: {
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        cadreConseille: contexte.cadre,
+      },
+    });
+    if (count === 0) return false;
+
+    await transaction.measurement.createMany({
+      data: constats.map((constat) => ({
+        studyId: etudeId,
+        joint: constat.articulation,
+        value: constat.valeur,
+        targetMin: constat.plage.min,
+        targetMax: constat.plage.max,
+        status: constat.statut,
+      })),
+    });
+    if (consignes.length > 0) {
+      await transaction.recommendation.createMany({
+        data: consignes.map((constat, rang) => ({
+          studyId: etudeId,
+          joint: constat.articulation,
+          text: constat.consigne as string,
+          priority: rang + 1,
+        })),
+      });
+    }
+    return true;
+  });
+}
+
+/** Les quatre angles attendus, presents et plausibles ? Sinon null. */
+export function lireAngles(brut: unknown): Angles | null {
+  if (typeof brut !== 'object' || brut === null) return null;
+
+  const angles = {} as Angles;
+  for (const articulation of ARTICULATIONS) {
+    const valeur = (brut as Record<string, unknown>)[articulation];
+    if (typeof valeur !== 'number' || !Number.isFinite(valeur) || valeur < 0 || valeur > 180) {
+      return null;
+    }
+    angles[articulation] = valeur;
+  }
+  return angles;
 }
 
 /**

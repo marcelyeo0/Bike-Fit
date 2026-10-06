@@ -1,5 +1,6 @@
 import 'server-only';
 import { db } from '../db';
+import { Prisma } from '../../generated/prisma/client';
 import type { Mensurations } from '../saisie';
 import { SELECTION_ETUDE, type EtudeResumee } from './dashboard';
 
@@ -142,7 +143,17 @@ export async function modifierMensurations(
     where: { id: clientId, userId },
     data: { tailleCm: mensurations.tailleCm, entrejambeCm: mensurations.entrejambeCm },
   });
-  return count > 0;
+  if (count === 0) return false;
+
+  // Les fourchettes d'une seance sont calculees a partir des mensurations puis
+  // figees sur l'etude : celles des brouillons de ce client sont remises a
+  // zero, la prochaine ouverture de seance les recalcule. Une etude terminee
+  // garde les siennes — un compte rendu ne change pas apres coup.
+  await db.study.updateMany({
+    where: { clientId, userId, status: 'DRAFT' },
+    data: { plagesSeance: Prisma.DbNull },
+  });
+  return true;
 }
 
 /**

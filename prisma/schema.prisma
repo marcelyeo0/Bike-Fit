@@ -146,6 +146,18 @@ model Study {
   pratique Pratique?
   objectif Objectif?
 
+  /// Fourchettes et consignes retenues pour CETTE seance, figees a son
+  /// ouverture (voir src/lib/requetes/plages.ts) : la seance en direct et
+  /// l'enregistrement lisent la meme chose, et la source externe n'est
+  /// interrogee qu'une fois par etude. Forme : `PlagesSeance`
+  /// (src/lib/biomeca/plages.ts). Calcule cote serveur, jamais saisi.
+  plagesSeance Json?
+
+  /// Taille de cadre estimee a partir des mensurations (« M », « S–M »),
+  /// figee a l'enregistrement de la seance : le compte rendu reste lisible
+  /// tel qu'il a ete produit si la fiche client change ensuite.
+  cadreConseille String?
+
   status      StudyStatus @default(DRAFT)
   isDemo      Boolean     @default(false)
   createdAt   DateTime    @default(now())

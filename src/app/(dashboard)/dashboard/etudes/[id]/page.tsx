@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from '@phosphor-icons/react/dist/ssr';
+import { ArrowLeft, VideoCamera } from '@phosphor-icons/react/dist/ssr';
 import { requireUser } from '../../../../../lib/auth';
 import { lireIdentifiant } from '../../../../../lib/saisie';
 import { lireEtude } from '../../../../../lib/requetes/etudes';
@@ -19,7 +19,13 @@ import type { MeasurementStatus } from '../../../../../generated/prisma/enums';
 import { PASTILLES } from '../../_composants/CarteEtude';
 import BoutonSuppression from '../../../_composants/BoutonSuppression';
 import EtatVide from '../../../_composants/EtatVide';
-import { BLOC, LIEN_DISCRET, MESSAGE_INFO, SURTITRE } from '../../../_composants/classes';
+import {
+  BLOC,
+  BOUTON_PRIMAIRE,
+  LIEN_DISCRET,
+  MESSAGE_INFO,
+  SURTITRE,
+} from '../../../_composants/classes';
 import { actionSupprimerEtude } from '../actions';
 import BoutonImprimer from './_composants/BoutonImprimer';
 import NomCycliste from './_composants/NomCycliste';
@@ -56,7 +62,7 @@ export default async function EtudePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ creee?: string }>;
+  searchParams: Promise<{ creee?: string; terminee?: string }>;
 }) {
   const utilisateur = await requireUser();
   const [{ id }, parametres] = await Promise.all([params, searchParams]);
@@ -70,6 +76,10 @@ export default async function EtudePage({
   const sujet = etude.client?.code ?? etude.titre ?? 'Étude sans client';
   const date = formaterDate(etude.completedAt ?? etude.createdAt);
   const ecarts = etude.measurements.filter((mesure) => mesure.status === 'OUT').length;
+  // La seance ne s'ouvre que sur un brouillon de l'atelier : ni sur la
+  // demonstration, ni sur une etude terminee. La page de seance refait le
+  // controle.
+  const seanceOuverte = etude.modifiable && etude.status === 'DRAFT';
 
   return (
     <article>
@@ -121,7 +131,13 @@ export default async function EtudePage({
           </div>
         </div>
 
-        <div className="print:hidden">
+        <div className="flex flex-wrap items-center gap-3 print:hidden">
+          {seanceOuverte && (
+            <Link href={`/dashboard/etudes/${etude.id}/seance`} className={BOUTON_PRIMAIRE}>
+              <VideoCamera size={18} weight="regular" />
+              Démarrer la séance
+            </Link>
+          )}
           <BoutonImprimer />
         </div>
       </header>
@@ -131,13 +147,18 @@ export default async function EtudePage({
           Étude ouverte en brouillon.
         </p>
       )}
+      {parametres.terminee === '1' && (
+        <p role="status" className={`${MESSAGE_INFO} mt-6 print:hidden`}>
+          Séance enregistrée : l’étude est terminée.
+        </p>
+      )}
       {etude.isDemo && (
         <p className={`${MESSAGE_INFO} mt-6 print:hidden`}>
           Étude de démonstration, en lecture seule : elle montre à quoi ressemble un compte rendu.
         </p>
       )}
 
-      <dl className="m-0 mt-8 grid gap-4 sm:grid-cols-3 print:mt-6 print:grid-cols-3">
+      <dl className="m-0 mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 print:mt-6 print:grid-cols-4">
         {[
           { terme: 'Code client', valeur: etude.client?.code ?? '—' },
           {
@@ -148,6 +169,7 @@ export default async function EtudePage({
             terme: 'Objectif',
             valeur: etude.objectif ? LIBELLES_OBJECTIF[etude.objectif] : 'Non renseigné',
           },
+          { terme: 'Taille de cadre estimée', valeur: etude.cadreConseille ?? '—' },
         ].map(({ terme, valeur }) => (
           <div key={terme} className={`${BLOC} p-5 print:rounded-none print:border-0 print:p-0`}>
             <dt className="font-mono text-[11px] uppercase tracking-[.08em] text-gris">
@@ -172,8 +194,9 @@ export default async function EtudePage({
             <div className="mt-4 print:hidden">
               <EtatVide image="/assets/feature-pose.jpg" titre="Aucune mesure pour l’instant">
                 <p className="m-0">
-                  Cette étude est en brouillon. Les angles et leurs fourchettes cibles apparaîtront
-                  ici une fois la séance de capture réalisée.
+                  {seanceOuverte
+                    ? 'Cette étude est en brouillon. Démarrez la séance pour mesurer les angles et les comparer à leurs fourchettes cibles.'
+                    : 'Aucun angle n’a été enregistré pour cette étude.'}
                 </p>
               </EtatVide>
             </div>

@@ -169,7 +169,7 @@ PostgreSQL via Prisma 7. Le schéma vit dans `prisma/schema.prisma`.
 | --- | --- | --- |
 | `User` | `clerkId`, `email`, `name`, `role`, `plan`, `subscriptionStatus`, `dernierNumeroClient` | L'atelier. Seules données nominatives de la base |
 | `Client` | `code`, `tailleCm`, `entrejambeCm` | Un pseudonyme : aucun nom, aucun contact, aucun texte libre |
-| `Study` | `clientId`, `pratique`, `objectif`, `status`, `isDemo` | Une étude de position |
+| `Study` | `clientId`, `pratique`, `objectif`, `status`, `isDemo`, `plagesSeance`, `cadreConseille` | Une étude de position, ses fourchettes figées et la taille de cadre estimée |
 | `Measurement` | `joint`, `value`, `targetMin`, `targetMax`, `status` | Un angle et la fourchette cible retenue pour cette étude |
 | `Recommendation` | `joint`, `text`, `priority` | Un conseil de réglage |
 
@@ -208,6 +208,48 @@ service `migrate`.
 > La migration `20261006090000` **supprime** `Client.nom`, `Client.email` et
 > `Client.notes` et renumérote les fiches existantes. Sur une base qui porte
 > de vraies fiches, exporter la correspondance nom / fiche avant de l'appliquer.
+
+## Séance de capture
+
+`/dashboard/etudes/[id]/seance`, ouverte depuis une étude en brouillon : la
+fenêtre vidéo à gauche (caméra en direct ou fichier local, squelette
+superposé), les retours texte à droite.
+
+- **Rien ne quitte le navigateur.** La pose est détectée par MediaPipe Pose
+  Landmarker, dont le modèle (`public/mediapipe/pose_landmarker.task`,
+  versionné) et le runtime WASM (copié de `node_modules` par
+  `scripts/copier-mediapipe.mjs` au `predev` / `prebuild`) sont servis par
+  l'application : aucun CDN. Seuls quatre angles partent vers le serveur, au
+  clic sur « Enregistrer la séance ».
+- **Angles** (`src/lib/biomeca/angles.ts`) : genou, hanche, coude, épaule, du
+  côté le mieux vu. Sur une fenêtre glissante de 6 s : extension maximale pour
+  le genou, angle le plus fermé pour la hanche, moyenne pour coude et épaule.
+- **Fourchettes** : à l'ouverture de la séance, le serveur les calcule pour la
+  pratique, l'objectif et la morphologie (taille, entrejambe), puis les fige
+  sur l'étude (`Study.plagesSeance`). Source : Gemini si `GEMINI_API_KEY` est
+  renseignée et que sa réponse passe la validation (bornes, écart maximal à la
+  table, vocabulaire), sinon la table locale de `src/lib/biomeca/plages.ts`.
+  Ne partent chez Google que la pratique, l'objectif, la taille et
+  l'entrejambe. Modifier les mensurations d'un client remet à zéro les
+  fourchettes de ses brouillons.
+- **Estimations figées** (`src/lib/biomeca/cadre.ts`) : taille de cadre
+  (« M », « S–M » près d'une frontière) et hauteur de selle indicative,
+  tirées des mensurations et affichées pendant toute la séance.
+- **Consignes** (`src/lib/biomeca/regles.ts`) : une seule à l'écran, la plus
+  prioritaire (selle, puis recul, puis poste de pilotage), avec une
+  correction de hauteur de selle chiffrée en millimètres.
+- **Enregistrement** : le serveur recalcule statuts, consignes et taille de
+  cadre à partir des fourchettes figées ; il ne croit du navigateur que les
+  angles. L'étude passe à « terminée ».
+
+> Les valeurs de la table de fourchettes, de l'ajustement morphologique et de
+> l'estimation de cadre sont des **ordres de grandeur usuels, non sourcés**.
+> Elles sont regroupées dans `plages.ts` et `cadre.ts` pour être remplacées
+> par des valeurs référencées et validées par un fitter.
+
+```bash
+npm run biomeca:verify   # angles, fourchettes, cadre, consignes : sans base ni caméra
+```
 
 ## Dashboard : règles de sécurité
 

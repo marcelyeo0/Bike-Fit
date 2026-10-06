@@ -37,3 +37,6 @@ frontend/
 
 # cache incremental de TypeScript
 *.tsbuildinfo
+
+# runtime WASM de MediaPipe : copie de node_modules par scripts/copier-mediapipe.mjs
+/public/mediapipe/wasm/

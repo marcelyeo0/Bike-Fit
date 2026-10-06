@@ -100,6 +100,8 @@ services:
       <<: *url-base
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?Renseignez CLERK_SECRET_KEY (sk_live_...)}
       CLERK_WEBHOOK_SECRET: ${CLERK_WEBHOOK_SECRET:?Renseignez CLERK_WEBHOOK_SECRET (whsec_...)}
+      # Optionnelle : sans elle, les fourchettes d'angle viennent de la table locale.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
     # Aucun `ports:` : seul Caddy parle a `web`.
     expose:

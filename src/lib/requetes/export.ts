@@ -18,6 +18,7 @@ const SELECTION_ETUDE_EXPORT = {
   isDemo: true,
   pratique: true,
   objectif: true,
+  cadreConseille: true,
   createdAt: true,
   completedAt: true,
   measurements: {
@@ -36,6 +37,7 @@ type EtudeBrute = {
   isDemo: boolean;
   pratique: string | null;
   objectif: string | null;
+  cadreConseille: string | null;
   createdAt: Date;
   completedAt: Date | null;
   measurements: {
@@ -54,6 +56,7 @@ function mettreEnFormeEtude(etude: EtudeBrute) {
     statut: etude.status,
     pratique: etude.pratique,
     objectif: etude.objectif,
+    tailleCadreEstimee: etude.cadreConseille,
     creeeLe: etude.createdAt.toISOString(),
     termineeLe: etude.completedAt?.toISOString() ?? null,
     mesures: etude.measurements.map((mesure) => ({
