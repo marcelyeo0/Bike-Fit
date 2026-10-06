@@ -1,85 +1,236 @@
-# Axio, site vitrine
+# Axio
 
-Landing page d'Axio, le logiciel d'analyse de posture cycliste destiné aux
-ateliers vélo. Branche `web` : ici vit uniquement le site, l'application Python
-reste sur `main`.
+Analyse de position cycliste pour les ateliers vélo (B2B). Ce dépôt porte le
+site vitrine et le dashboard de l'atelier : **Next.js 16 (App Router)**,
+authentification **Clerk**, données **Prisma 7** sur **PostgreSQL 16**, le tout
+lançable sous **Docker**.
 
-Le site reproduit le canvas de référence `web design/Axio.dc.html` pour la
-navigation, le hero et la barre de preuve. À partir de la section
-« Comment ça marche », la mise en page a été retravaillée : les maquettes en
-`<div>` du canvas (fausse caméra, faux rapport, faux graphiques) sont remplacées
-par des photographies, et les pictogrammes viennent d'une seule famille
-d'icônes.
+Branches : `web` porte le site et le début du dashboard, `web_docker` ajoute
+Docker et le dashboard complet. L'ancien prototype Python reste sur `main`.
 
 ## Lancer
 
+Dans les deux cas, commencer par le fichier d'environnement :
+
 ```bash
-npm install       # dépendances
-cp .env.example .env   # puis renseigner les clés Clerk et DATABASE_URL
-npx prisma migrate dev # crée le schéma en base
-npm run seed           # jeu de démonstration (facultatif)
-npm run dev            # serveur de développement sur :3000
-npm run build          # build de production
+cp .env.example .env
+# puis renseigner NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY et CLERK_SECRET_KEY
+# (dashboard Clerk > API keys). Le reste a des valeurs par défaut.
 ```
 
-Le site tourne sur **Next.js (App Router)**. L'authentification passe par Clerk,
-les données par Prisma et PostgreSQL.
+### Avec Docker : la stack complète, « comme en production »
+
+```bash
+docker compose up --build
+```
+
+L'application est sur http://localhost:3000, base migrée et jeu de
+démonstration chargé. Trois services :
+
+| Service | Rôle | État attendu |
+| --- | --- | --- |
+| `db` | PostgreSQL 16, volume nommé, publié sur `127.0.0.1:5433` | `healthy` |
+| `migrate` | `prisma migrate deploy` puis seed, démarre quand `db` est sain | `exited (0)` |
+| `web` | Next.js en build de production (serveur autonome), démarre quand `migrate` a réussi | `healthy` |
+
+```bash
+docker compose ps -a          # état des trois services
+docker compose logs migrate   # migrations appliquées, seed
+docker compose down           # arrêter (les données restent dans le volume)
+docker compose down -v        # arrêter ET effacer la base
+```
+
+À savoir :
+
+- Les `NEXT_PUBLIC_*` sont figées dans le bundle au build. Après avoir changé
+  une clé publique, relancer avec `--build`.
+- Les secrets (`CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SECRET`, `DATABASE_URL`)
+  ne sont passés qu'à l'exécution : aucun n'entre dans l'image.
+- Dans les conteneurs la base s'appelle `db` : `compose.yaml` construit leur
+  `DATABASE_URL` à partir de `POSTGRES_*`. Le `DATABASE_URL` de `.env` reste
+  celui de l'hôte (`localhost:5433`). Le même `.env` sert aux deux usages.
+- Port 5433 et non 5432 : un PostgreSQL installé sur la machine occupe souvent
+  5432. Se change avec `AXIO_DB_PORT` (et `AXIO_WEB_PORT` pour le 3000).
+
+### Sans conteneur pour l'application : le développement au quotidien
+
+Pas de rechargement à chaud dans un conteneur (les montages de dossiers sont
+lents sous Windows). Seule la base tourne sous Docker, Next tourne sur l'hôte :
+
+```bash
+npm install               # dépendances + génération du client Prisma
+docker compose up -d db   # la base seule
+npm run db:deploy         # applique les migrations
+npm run seed              # jeu de démonstration (idempotent)
+npm run dev               # http://localhost:3000, rechargement à chaud
+```
+
+`DATABASE_URL` doit viser `localhost:5433` (valeur de `.env.example`). Si la
+stack complète tourne déjà, arrêter son service web pour libérer le port 3000 :
+`docker compose stop web`.
+
+### Vérifier
+
+```bash
+npx tsc --noEmit          # types
+npm run build             # build de production
+npm run db:verify         # connexion, schéma, pseudonymisation, étude de démo
+npm run db:isolation      # un atelier ne lit ni ne modifie rien d'un autre
+```
+
+`db:isolation` écrit des données de test puis les supprime ; il refuse toute
+base qui n'est pas locale.
+
+### Production
+
+`compose.prod.yaml` + `Caddyfile` : Caddy en frontal HTTPS (certificat
+automatique), `web` et `db` sur un réseau interne, base jamais publiée, seuls
+80 et 443 exposés.
+
+```bash
+# .env : AXIO_DOMAINE, POSTGRES_PASSWORD, clés Clerk pk_live_/sk_live_,
+# CLERK_WEBHOOK_SECRET
+docker compose -f compose.prod.yaml up -d --build
+```
+
+**Non testé de bout en bout** : il faut un domaine pointant sur le serveur.
+Seule la syntaxe est validée (`docker compose -f compose.prod.yaml config`,
+`caddy validate`). La sauvegarde chiffrée de la base n'est pas incluse.
 
 ## Structure
 
 ```
+Dockerfile            multi-étapes : deps, migrate, build, run (non root)
+compose.yaml          db + migrate + web, pour la machine de développement
+compose.prod.yaml     caddy + web + migrate + db, pour un serveur
+Caddyfile             frontal HTTPS de production
+docker/migrer.sh      tâche du service migrate (fins de ligne LF)
 prisma/
   schema.prisma       modèles, enums, index
+  migrations/         une migration appliquée ne se modifie jamais
   seed.ts             jeu de démonstration (1 atelier, 2 clients, 1 étude)
 prisma7.config.ts     config Prisma 7 : schéma, migrations, commande de seed
-public/assets/        visuels du canvas + photos générées
+scripts/
+  verify-prisma.ts    npm run db:verify
+  verify-isolation.ts npm run db:isolation
+public/assets/        visuels de la landing, réutilisés par les états vides
 src/
-  app/
-    layout.tsx        ClerkProvider, polices, thème Clerk global
-    page.tsx          landing (client component, branche les deux hooks motion)
-    globals.css       base Tailwind, type fantôme, état initial des révélations
-    sign-in/[[...sign-in]]/page.tsx
-    sign-up/[[...sign-up]]/page.tsx
-    dashboard/page.tsx
-    api/webhooks/clerk/route.ts   synchronisation Clerk -> table User
   middleware.ts       clerkMiddleware : /dashboard et /admin protégés
   generated/prisma/   client Prisma généré (non versionné)
+  app/
+    layout.tsx        ClerkProvider, polices, thème Clerk global
+    page.tsx          landing
+    globals.css       base Tailwind, feuille d'impression A4
+    pricing/          redirige vers la grille tarifaire de la landing
+    sign-in/, sign-up/
+    api/
+      sante/route.ts            sonde du HEALTHCHECK (interroge la base)
+      webhooks/clerk/route.ts   synchronisation Clerk -> table User
+    (dashboard)/
+      layout.tsx                coque : barre latérale, retirée à l'impression
+      _composants/              BarreLaterale, EtatVide, BoutonSuppression,
+                                ChampsMensurations, classes (boutons, champs)
+      dashboard/
+        page.tsx                tableau de bord : compteurs, études récentes
+        _composants/            CarteStat, CarteEtude, BandeauAbonnement,
+                                BoutonNouvelleEtude
+        clients/
+          page.tsx              carnet + création d'un client
+          actions.ts            créer, modifier les mensurations, supprimer
+          [id]/page.tsx         fiche, historique, export, suppression
+          [id]/export/route.ts  export JSON du client
+        etudes/
+          page.tsx              liste, filtre par statut, pagination
+          actions.ts            supprimer
+          nouvelle/             formulaire + action de création
+          [id]/page.tsx         détail et compte rendu imprimable
+          [id]/_composants/     BoutonImprimer, NomCycliste
+        parametres/
+          page.tsx              compte, formule, export
+          export/route.ts       export JSON complet de l'atelier
   lib/
-    db.ts             singleton PrismaClient
+    db.ts             PrismaClient, instancié au premier accès
     auth.ts           getCurrentUser / requireUser / requireAdmin
-    clerkAppearance.ts thème Clerk calé sur les tokens Tailwind
-    clerkLocalization.ts  compléments français au pack frFR
-    useReveal.js      révélation au scroll (IntersectionObserver)
-    useParallax.js    parallaxe douce (GSAP ScrollTrigger)
-  ui/
-    Nav.jsx           navigation collante, menu mobile, consciente de la session
-    Footer.jsx
-    components/Bouton.jsx   variantes de boutons, contrastes calés AA
-    sections/         Hero, Preuve, Comment, Fonctionnalites, Livrable,
-                      Tarifs, Temoignage, Ressources, Cta
+    access.ts         canCreateStudy : le droit d'ouvrir une étude
+    saisie.ts         validation de ce qui vient du navigateur
+    libelles.ts       textes des enums, mises en forme (dates, cm, degrés)
+    messagesAcces.ts  formulations des refus d'accès
+    requetes/         dashboard, clients, etudes, export (server-only)
+    clerkAppearance.ts, clerkLocalization.ts
+    useReveal.js, useParallax.js
+  ui/                 composants de la landing (Nav, Footer, sections)
 ```
 
-## Base de données
+## Modèle de données
 
 PostgreSQL via Prisma 7. Le schéma vit dans `prisma/schema.prisma`.
 
+| Modèle | Champs principaux | Remarque |
+| --- | --- | --- |
+| `User` | `clerkId`, `email`, `name`, `role`, `plan`, `subscriptionStatus`, `dernierNumeroClient` | L'atelier. Seules données nominatives de la base |
+| `Client` | `code`, `tailleCm`, `entrejambeCm` | Un pseudonyme : aucun nom, aucun contact, aucun texte libre |
+| `Study` | `clientId`, `pratique`, `objectif`, `status`, `isDemo` | Une étude de position |
+| `Measurement` | `joint`, `value`, `targetMin`, `targetMax`, `status` | Un angle et la fourchette cible retenue pour cette étude |
+| `Recommendation` | `joint`, `text`, `priority` | Un conseil de réglage |
+
+Règles portées par le schéma et le code :
+
+- **Le serveur ne connaît pas l'identité du cycliste.** Un client est un code
+  (`AX-0001`), séquentiel par atelier, généré côté serveur et unique par
+  atelier. La correspondance entre un code et une personne reste en boutique.
+  Le nom saisi sur le compte rendu imprimé ne quitte jamais le navigateur.
+- **Pas de texte libre.** Un champ de commentaire finit toujours par contenir
+  un nom ou une information de santé. Les seules saisies sur un client sont
+  deux mensurations en centimètres.
+- **Codes sans doublon.** Le numéro vient de `User.dernierNumeroClient`,
+  incrémenté dans la transaction de création : le verrou de ligne sérialise
+  les créations simultanées. Un code supprimé n'est jamais réattribué.
+- **Pratique et objectif** (`ROUTE` / `GRAVEL` / `CHRONO`, `CONFORT` /
+  `MIXTE` / `AERO`) sont exigés à la création. Ils sont nullables en base
+  pour les études antérieures à leur ajout.
+- **Aucune vidéo n'est stockée.** Seuls les angles mesurés et les
+  recommandations sont persistés.
+- **Suppression en cascade.** Supprimer un client emporte ses études, leurs
+  mesures et leurs recommandations ; supprimer un `User` emporte tout. C'est
+  ce qui rend l'événement `user.deleted` du webhook sûr.
+
 ```bash
 npx prisma migrate dev --name ma_migration   # créer et appliquer une migration
+npm run db:deploy                            # appliquer les migrations en attente
 npx prisma generate                          # régénérer le client (auto au postinstall)
 npm run seed                                 # rejouer le jeu de démonstration
 npm run db:studio                            # explorer la base
 ```
 
-Deux règles portées par le schéma :
+Le seed est **idempotent** (`upsert`), donc rejouable à chaque démarrage du
+service `migrate`.
 
-- **Aucune vidéo n'est stockée.** Les fichiers sont traités puis supprimés ;
-  seuls les angles mesurés et les recommandations sont persistés.
-- **Suppression en cascade depuis `User`.** Supprimer un utilisateur emporte ses
-  clients, ses études, leurs mesures et leurs recommandations. C'est ce qui rend
-  l'événement `user.deleted` du webhook sûr.
+> La migration `20261006090000` **supprime** `Client.nom`, `Client.email` et
+> `Client.notes` et renumérote les fiches existantes. Sur une base qui porte
+> de vraies fiches, exporter la correspondance nom / fiche avant de l'appliquer.
 
-Le seed est **idempotent** : identifiants fixes et `upsert`, donc rejouable après
-chaque `prisma migrate reset`.
+## Dashboard : règles de sécurité
+
+- Toute lecture et toute écriture passe par `src/lib/requetes/`, modules
+  `server-only` dont chaque fonction prend en premier paramètre le `userId`
+  de `requireUser()` et le pose dans son `WHERE`.
+- Une server action et un route handler sont des endpoints publics : chacun
+  refait le contrôle d'identité, de droit et d'appartenance de chaque
+  identifiant reçu.
+- Un identifiant d'un autre atelier donne un **404**, pas un 403.
+- `@clerk/nextjs/server` n'est importé que par `src/lib/auth.ts`, le
+  middleware et le webhook.
+- L'étude de démonstration (`isDemo`) est lisible par tous les ateliers,
+  modifiable et supprimable par aucun.
+
+La séance de capture (caméra, détection de pose, calcul des angles) n'est pas
+encore là : une étude créée reste en brouillon, sans mesure.
+
+## Vocabulaire
+
+L'interface et le seed parlent de **réglage**, de **position**, de
+**fourchette** et de **confort**. Jamais de soin : Axio est un outil d'aide au
+réglage et ne constitue pas un avis médical.
 
 ## Webhook Clerk
 
