@@ -1,0 +1,124 @@
+# Production : Caddy en frontal HTTPS, Next et Postgres sur un reseau interne.
+#
+#   docker compose -f compose.prod.yaml --env-file .env up -d --build
+#
+# Regles reprises du document de cadrage :
+#   - versions d'images figees, utilisateur non root, build multi-etapes ;
+#   - un healthcheck par service, `depends_on` conditionne a l'etat sain ;
+#   - secrets passes par variables d'environnement, `.env` hors git ;
+#   - la base n'est jamais joignable depuis Internet (aucun port publie) ;
+#   - seuls 80 et 443 sont exposes, par Caddy.
+#
+# NON TESTE de bout en bout : il faut un nom de domaine pointant sur le
+# serveur pour que Caddy obtienne son certificat. La syntaxe est validee
+# (`docker compose -f compose.prod.yaml config`, `caddy validate`), pas le
+# deploiement. Le conteneur de sauvegarde n'est pas inclus.
+
+name: axio-prod
+
+x-url-base: &url-base
+  DATABASE_URL: postgresql://${POSTGRES_USER:-axio}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire en production}@db:5432/${POSTGRES_DB:-axio}?schema=public
+
+services:
+  caddy:
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    environment:
+      AXIO_DOMAINE: ${AXIO_DOMAINE:?AXIO_DOMAINE est obligatoire (ex. app.axio.fr)}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_donnees:/data
+      - caddy_config:/config
+    networks:
+      - frontal
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      # API d'administration de Caddy, sur la boucle locale du conteneur.
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:2019/config/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  db:
+    image: postgres:16.15-alpine3.23
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-axio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire en production}
+      POSTGRES_DB: ${POSTGRES_DB:-axio}
+    # Aucun `ports:` : la base n'est joignable que depuis le reseau interne.
+    volumes:
+      - db_donnees:/var/lib/postgresql/data
+    networks:
+      - interne
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Migrations jouees avant le demarrage de `web`. Le seed pose l'etude de
+  # demonstration affichee aux ateliers qui n'ont encore aucune etude ;
+  # AXIO_SEED=0 le desactive.
+  migrate:
+    image: ${AXIO_IMAGE_MIGRATE:-axio-migrate}:${AXIO_VERSION:-latest}
+    build:
+      context: .
+      target: migrate
+    restart: "no"
+    environment:
+      <<: *url-base
+      AXIO_SEED: ${AXIO_SEED:-1}
+    networks:
+      - interne
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    image: ${AXIO_IMAGE_WEB:-axio-web}:${AXIO_VERSION:-latest}
+    build:
+      context: .
+      target: run
+      args:
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?Renseignez NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY (pk_live_...)}
+        NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
+        NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
+        NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL:-/dashboard}
+        NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL:-/dashboard}
+        NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL:-/dashboard}
+    restart: unless-stopped
+    environment:
+      <<: *url-base
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?Renseignez CLERK_SECRET_KEY (sk_live_...)}
+      CLERK_WEBHOOK_SECRET: ${CLERK_WEBHOOK_SECRET:?Renseignez CLERK_WEBHOOK_SECRET (whsec_...)}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+    # Aucun `ports:` : seul Caddy parle a `web`.
+    expose:
+      - "3000"
+    networks:
+      - frontal
+      - interne
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+networks:
+  # Caddy <-> web
+  frontal:
+  # web / migrate <-> db. `internal` : aucun acces sortant ni entrant.
+  interne:
+    internal: true
+
+volumes:
+  db_donnees:
+  caddy_donnees:
+  caddy_config:

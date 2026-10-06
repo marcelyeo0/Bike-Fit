@@ -1,0 +1,9 @@
+# Fins de ligne LF forcees pour les fichiers lus par un conteneur Linux : sous
+# Windows (core.autocrlf), un script shell extrait en CRLF echoue avec
+# « not found » ou « bad interpreter ».
+#
+# Volontairement pas de regle globale `* text=auto` : elle renormaliserait
+# tout le depot et noierait l'historique sous des diffs de fins de ligne.
+*.sh        text eol=lf
+Dockerfile* text eol=lf
+Caddyfile   text eol=lf

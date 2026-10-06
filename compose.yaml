@@ -1,0 +1,86 @@
+# Stack locale « comme en production » : base, migrations, serveur Next.
+#
+#   cp .env.example .env      # puis renseigner les cles Clerk
+#   docker compose up --build # http://localhost:3000
+#
+# Developpement au quotidien (pas de rechargement a chaud en conteneur, les
+# montages de dossiers sont lents sous Windows) :
+#
+#   docker compose up -d db
+#   npm run dev
+#
+# Les variables viennent du fichier `.env`, lu par Compose pour
+# l'interpolation. Seules celles listees ici entrent dans les conteneurs.
+
+name: axio
+
+# Depuis un conteneur, la base s'appelle `db` (port interne 5432). L'URL est
+# donc construite ici et ne depend pas du DATABASE_URL de `.env`, qui reste
+# celui de l'hote (localhost) pour `npm run dev`.
+x-url-base: &url-base
+  DATABASE_URL: postgresql://${POSTGRES_USER:-axio}:${POSTGRES_PASSWORD:-axio}@db:5432/${POSTGRES_DB:-axio}?schema=public
+
+services:
+  db:
+    image: postgres:16.15-alpine3.23
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-axio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-axio}
+      POSTGRES_DB: ${POSTGRES_DB:-axio}
+    ports:
+      # Publie sur la boucle locale uniquement. 5433 par defaut : un Postgres
+      # installe sur l'hote occupe souvent deja 5432.
+      - "127.0.0.1:${AXIO_DB_PORT:-5433}:5432"
+    volumes:
+      - db_donnees:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Tache ponctuelle : `prisma migrate deploy` puis seed, et le conteneur
+  # s'arrete. `web` attend qu'elle ait reussi.
+  migrate:
+    build:
+      context: .
+      target: migrate
+    restart: "no"
+    environment:
+      <<: *url-base
+      AXIO_SEED: ${AXIO_SEED:-1}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      target: run
+      args:
+        # Figees dans le bundle au build : voir le Dockerfile.
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?Renseignez NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY dans .env}
+        NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
+        NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
+        NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL:-/dashboard}
+        NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL:-/dashboard}
+        NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL:-/dashboard}
+    restart: unless-stopped
+    environment:
+      <<: *url-base
+      # Secrets : fournis a l'execution seulement, jamais dans l'image.
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?Renseignez CLERK_SECRET_KEY dans .env}
+      CLERK_WEBHOOK_SECRET: ${CLERK_WEBHOOK_SECRET:-}
+      # Le middleware Clerk lit aussi la cle publique cote serveur.
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+    ports:
+      - "127.0.0.1:${AXIO_WEB_PORT:-3000}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    # Le HEALTHCHECK HTTP est porte par l'image (voir Dockerfile).
+
+volumes:
+  db_donnees:

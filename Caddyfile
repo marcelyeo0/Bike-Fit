@@ -1,0 +1,26 @@
+# Frontal HTTPS de production. Caddy obtient et renouvelle le certificat
+# tout seul pour le domaine donne par AXIO_DOMAINE (voir compose.prod.yaml).
+# Les ports 80 et 443 doivent etre ouverts et le DNS pointer sur le serveur.
+#
+# Non teste sans domaine reel : seule la syntaxe est validee.
+
+{$AXIO_DOMAINE} {
+	encode zstd gzip
+
+	header {
+		# HTTPS uniquement.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# La camera sert a la seance de capture, sur ce domaine uniquement.
+		Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+		-Server
+	}
+
+	reverse_proxy web:3000
+
+	# Aucune donnee personnelle dans les traces : pas de journal d'acces
+	# (il porterait les adresses IP et les URL). Seules les erreurs de Caddy
+	# partent sur la sortie standard.
+}

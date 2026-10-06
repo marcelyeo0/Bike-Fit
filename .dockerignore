@@ -1,0 +1,52 @@
+# Liste stricte : tout ce qui n'est pas necessaire au build de l'image reste
+# hors du contexte envoye au demon Docker.
+
+# Secrets et configuration locale
+.env
+.env.*
+!.env.example
+
+# Git, editeurs, outillage d'agents
+.git
+.gitignore
+.gitattributes
+.vscode
+.idea
+.agents
+.claude
+.windsurf
+.impeccable
+skills-lock.json
+
+# Produits de build et dependances (reconstruits dans l'image)
+node_modules
+.next
+src/generated
+tsconfig.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+
+# Residus de l'ancien prototype Python
+venv
+build
+dist
+__pycache__
+*.pyc
+*.spec
+frontend
+draft
+web design
+graphify-out
+asset
+config
+main.py
+test_core.py
+requirements.txt
+*.zip
+
+# Docker lui-meme et documentation : inutiles dans l'image
+Dockerfile*
+compose*.yaml
+Caddyfile
+.dockerignore
+*.md
