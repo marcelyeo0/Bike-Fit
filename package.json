@@ -43,6 +43,7 @@
     "postinstall": "prisma generate",
     "db:verify": "tsx scripts/verify-prisma.ts",
     "db:deploy": "prisma migrate deploy",
+    "admin:promouvoir": "tsx scripts/promouvoir-admin.ts",
     "biomeca:verify": "tsx scripts/verify-biomeca.ts",
     "db:isolation": "tsx --conditions=react-server scripts/verify-isolation.ts"
   }

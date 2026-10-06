@@ -19,7 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="min-h-screen bg-fond-doux print:min-h-0 print:bg-white">
-      <BarreLaterale plan={utilisateur.plan} />
+      <BarreLaterale plan={utilisateur.plan} accesIllimite={utilisateur.role === 'ADMIN'} />
 
       <div className="lg:pl-[264px] print:!pl-0">
         <main className="mx-auto w-full max-w-page px-5 pb-16 pt-[88px] lg:px-10 lg:pb-20 lg:pt-10 print:!max-w-none print:!p-0">

@@ -26,6 +26,9 @@ export const LIBELLES_PLAN: Record<Plan, string> = {
   MULTI: 'Multi-sites',
 };
 
+/** Affiche a la place de la formule pour un compte au role ADMIN. */
+export const LIBELLE_ACCES_ILLIMITE = 'Accès illimité';
+
 export const LIBELLES_ABONNEMENT: Record<SubscriptionStatus, string> = {
   NONE: 'Aucun abonnement',
   TRIALING: 'Période d’essai',

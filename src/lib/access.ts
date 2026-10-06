@@ -1,6 +1,6 @@
 import 'server-only';
 import { db } from './db';
-import { SubscriptionStatus } from '../generated/prisma/enums';
+import { Role, SubscriptionStatus } from '../generated/prisma/enums';
 import type { User } from '../generated/prisma/client';
 
 /**
@@ -14,6 +14,13 @@ import type { User } from '../generated/prisma/client';
  *
  * Aucun controle n'existe sur la creation de client : le carnet d'adresses
  * reste libre, seule l'etude est le geste facture.
+ *
+ * Le role ADMIN leve la limite de creation d'etudes, et rien d'autre : il ne
+ * donne acces aux donnees d'aucun autre atelier (le filtrage par `userId` de
+ * `src/lib/requetes/` ne lit pas le role). Il sert au compte de demonstration
+ * commerciale. Il se lit sur la ligne User de la base — celle que renvoie
+ * `requireUser()` —, jamais sur une valeur venue du navigateur ou de Clerk,
+ * et ne se pose que par `scripts/promouvoir-admin.ts`.
  */
 
 /**
@@ -24,6 +31,8 @@ import type { User } from '../generated/prisma/client';
  * essai, l'autre a un client qui l'etait et ne l'est plus.
  */
 export type MotifCreationEtude =
+  /** Role ADMIN : aucun quota, independamment de tout abonnement. */
+  | 'ACCES_ILLIMITE'
   /** Abonnement ACTIVE ou TRIALING : aucun quota. */
   | 'ABONNEMENT_ACTIF'
   /** Aucune etude reelle encore realisee : la premiere est offerte. */
@@ -47,13 +56,19 @@ const STATUTS_OUVRANTS: SubscriptionStatus[] = [
 /**
  * L'utilisateur peut-il ouvrir une nouvelle etude ?
  *
- * Ordre volontaire : l'abonnement d'abord, le comptage ensuite. Un abonne ne
- * declenche jamais la requete de comptage — c'est le cas courant.
+ * Ordre volontaire : le role et l'abonnement d'abord, le comptage ensuite.
+ * Un abonne ne declenche jamais la requete de comptage — c'est le cas courant.
+ * Le role passe avant l'abonnement pour que la facturation, quand elle
+ * ecrira `subscriptionStatus`, ne puisse pas refermer un acces illimite.
  *
  * `isDemo: false` dans le comptage : l'etude de demonstration est une vitrine,
  * elle ne doit pas consommer l'etude offerte.
  */
 export async function canCreateStudy(user: User): Promise<AutorisationCreationEtude> {
+  if (user.role === Role.ADMIN) {
+    return { autorise: true, motif: 'ACCES_ILLIMITE' };
+  }
+
   if (STATUTS_OUVRANTS.includes(user.subscriptionStatus)) {
     return { autorise: true, motif: 'ABONNEMENT_ACTIF' };
   }

@@ -3,7 +3,12 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { ArrowRight, DownloadSimple } from '@phosphor-icons/react/dist/ssr';
 import { requireUser } from '../../../../lib/auth';
-import { LIBELLES_ABONNEMENT, LIBELLES_PLAN, formaterDate } from '../../../../lib/libelles';
+import {
+  LIBELLES_ABONNEMENT,
+  LIBELLES_PLAN,
+  LIBELLE_ACCES_ILLIMITE,
+  formaterDate,
+} from '../../../../lib/libelles';
 import { BLOC, BOUTON_CONTOUR, LIEN_ACCENT } from '../../_composants/classes';
 import BoutonGererCompte from './_composants/BoutonGererCompte';
 
@@ -30,6 +35,7 @@ function Ligne({ terme, children }: { terme: string; children: React.ReactNode }
  */
 export default async function ParametresPage() {
   const utilisateur = await requireUser();
+  const accesIllimite = utilisateur.role === 'ADMIN';
 
   return (
     <>
@@ -63,15 +69,29 @@ export default async function ParametresPage() {
             Abonnement
           </h2>
 
-          <dl className="m-0 mt-4">
-            <Ligne terme="Formule">{LIBELLES_PLAN[utilisateur.plan]}</Ligne>
-            <Ligne terme="État">{LIBELLES_ABONNEMENT[utilisateur.subscriptionStatus]}</Ligne>
-          </dl>
+          {accesIllimite ? (
+            // Compte au role ADMIN : ni formule, ni abonnement a proposer.
+            <>
+              <dl className="m-0 mt-4">
+                <Ligne terme="Formule">{LIBELLE_ACCES_ILLIMITE}</Ligne>
+              </dl>
+              <p className="m-0 mt-5 text-[14px] leading-[1.6] text-texte-doux">
+                Ce compte crée des études sans limite, sans abonnement.
+              </p>
+            </>
+          ) : (
+            <>
+              <dl className="m-0 mt-4">
+                <Ligne terme="Formule">{LIBELLES_PLAN[utilisateur.plan]}</Ligne>
+                <Ligne terme="État">{LIBELLES_ABONNEMENT[utilisateur.subscriptionStatus]}</Ligne>
+              </dl>
 
-          <Link href="/pricing" className={`${LIEN_ACCENT} mt-5`}>
-            Voir les abonnements
-            <ArrowRight size={15} weight="regular" />
-          </Link>
+              <Link href="/pricing" className={`${LIEN_ACCENT} mt-5`}>
+                Voir les abonnements
+                <ArrowRight size={15} weight="regular" />
+              </Link>
+            </>
+          )}
         </section>
       </div>
 

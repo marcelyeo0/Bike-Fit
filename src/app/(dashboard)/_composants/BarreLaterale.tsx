@@ -13,7 +13,7 @@ import {
 } from '@phosphor-icons/react';
 import { UserButton } from '@clerk/nextjs';
 import type { Plan } from '../../../generated/prisma/enums';
-import { LIBELLES_PLAN } from '../../../lib/libelles';
+import { LIBELLES_PLAN, LIBELLE_ACCES_ILLIMITE } from '../../../lib/libelles';
 
 /**
  * Coque de navigation du dashboard.
@@ -39,7 +39,14 @@ function estActif(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export default function BarreLaterale({ plan }: { plan: Plan }) {
+export default function BarreLaterale({
+  plan,
+  accesIllimite,
+}: {
+  plan: Plan;
+  /** Compte au role ADMIN : pas de formule a afficher ni d'abonnement a proposer. */
+  accesIllimite: boolean;
+}) {
   const pathname = usePathname();
   const [ouvert, setOuvert] = useState(false);
 
@@ -93,8 +100,10 @@ export default function BarreLaterale({ plan }: { plan: Plan }) {
           <p className="m-0 font-mono text-[11px] uppercase tracking-[.08em] text-gris">
             Formule
           </p>
-          <p className="m-0 mt-1 text-[14.5px] font-semibold text-encre">{LIBELLES_PLAN[plan]}</p>
-          {plan === 'FREE' && (
+          <p className="m-0 mt-1 text-[14.5px] font-semibold text-encre">
+            {accesIllimite ? LIBELLE_ACCES_ILLIMITE : LIBELLES_PLAN[plan]}
+          </p>
+          {plan === 'FREE' && !accesIllimite && (
             <Link
               href="/pricing"
               className="mt-2 inline-block text-[13px] font-semibold text-rouge-texte underline underline-offset-2"

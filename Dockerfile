@@ -36,6 +36,9 @@ RUN npm ci
 FROM deps AS migrate
 COPY tsconfig.json ./
 COPY docker/migrer.sh ./docker/migrer.sh
+# Outil d'exploitation, lance a la main : `docker compose run --rm migrate
+# npx tsx scripts/promouvoir-admin.ts adresse@exemple.fr`.
+COPY scripts/promouvoir-admin.ts ./scripts/promouvoir-admin.ts
 USER node
 CMD ["sh", "docker/migrer.sh"]
 

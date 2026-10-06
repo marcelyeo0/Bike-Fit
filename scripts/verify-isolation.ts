@@ -317,6 +317,37 @@ async function main() {
       'A, sans abonnement et avec des etudes, n’a plus le droit d’en creer'
     );
 
+    console.log('Acces illimite');
+    await db.user.update({ where: { id: ID_A }, data: { role: 'ADMIN' } });
+    const adminA = await db.user.findUniqueOrThrow({ where: { id: ID_A } });
+    const droitAdmin = await canCreateStudy(adminA);
+    verifier(
+      droitAdmin.autorise === true && droitAdmin.motif === 'ACCES_ILLIMITE',
+      'A en ADMIN, sans abonnement et avec des etudes, cree sans limite'
+    );
+    verifier(
+      adminA.subscriptionStatus === 'NONE' && adminA.plan === 'FREE',
+      'le role ne touche ni la formule ni l etat d abonnement'
+    );
+    const etudeDeB = await etudes.creerEtude(ID_B, {
+      clientId: clientB.id,
+      pratique: 'ROUTE',
+      objectif: 'MIXTE',
+    });
+    if (!etudeDeB) throw new Error('etude de B non creee');
+    verifier(
+      (await etudes.lireEtude(ID_A, etudeDeB.id)) === null &&
+        (await clients.lireFicheClient(ID_A, clientB.id)) === null &&
+        (await etudes.supprimerEtude(ID_A, etudeDeB.id)) === false,
+      'le role ADMIN n ouvre ni la lecture ni la suppression chez un autre atelier'
+    );
+    await db.user.update({ where: { id: ID_A }, data: { role: 'USER' } });
+    verifier(
+      (await canCreateStudy(await db.user.findUniqueOrThrow({ where: { id: ID_A } }))).autorise ===
+        false,
+      'repasse en USER, A perd le droit de creer'
+    );
+
     console.log('Suppression en cascade');
     await clients.supprimerClient(ID_A, clientA.id);
     verifier(

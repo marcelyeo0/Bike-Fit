@@ -265,6 +265,31 @@ npm run biomeca:verify   # angles, fourchettes, cadre, consignes : sans base ni 
 - L'étude de démonstration (`isDemo`) est lisible par tous les ateliers,
   modifiable et supprimable par aucun.
 
+### Compte à accès illimité (rôle `ADMIN`)
+
+Hors abonnement, un atelier a droit à une étude offerte. Le rôle `ADMIN` lève
+cette limite pour le compte de démonstration commerciale : création d'études
+sans limite, sans abonnement, et aucune incitation à s'abonner dans
+l'interface.
+
+- Il **n'ouvre rien d'autre** : un compte `ADMIN` ne voit que ses propres
+  clients et études, le filtrage par `userId` ne lit pas le rôle.
+- Il est **indépendant de la facturation** : `plan` et `subscriptionStatus`
+  ne changent pas, le compte n'est pas compté comme abonné.
+- Il ne se pose **que par script**, sur un compte qui s'est déjà connecté une
+  fois. Aucune page ni variable d'environnement ne le donne.
+
+```bash
+npm run admin:promouvoir -- adresse@exemple.fr             # passe en ADMIN
+npm run admin:promouvoir -- adresse@exemple.fr --retirer   # repasse en USER
+
+# Sur la base de la stack Docker (production comprise)
+docker compose run --rm migrate npx tsx scripts/promouvoir-admin.ts adresse@exemple.fr
+```
+
+À réserver au compte du fondateur, et à retirer des comptes de prospects une
+fois l'abonnement en place.
+
 Une étude créée reste en brouillon jusqu'à l'enregistrement de sa séance de
 capture (voir plus haut).
 
