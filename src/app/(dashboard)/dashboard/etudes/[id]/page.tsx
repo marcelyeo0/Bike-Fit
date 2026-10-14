@@ -28,7 +28,6 @@ import {
 } from '../../../_composants/classes';
 import { actionSupprimerEtude } from '../actions';
 import BoutonImprimer from './_composants/BoutonImprimer';
-import NomCycliste from './_composants/NomCycliste';
 
 export const metadata: Metadata = {
   title: 'Étude - Axio',
@@ -73,7 +72,7 @@ export default async function EtudePage({
   const etude = await lireEtude(utilisateur.id, etudeId);
   if (!etude) notFound();
 
-  const sujet = etude.client?.code ?? etude.titre ?? 'Étude sans client';
+  const sujet = etude.client?.nom ?? etude.titre ?? 'Étude sans client';
   const date = formaterDate(etude.completedAt ?? etude.createdAt);
   const ecarts = etude.measurements.filter((mesure) => mesure.status === 'OUT').length;
   // La seance ne s'ouvre que sur un brouillon de l'atelier : ni sur la
@@ -160,7 +159,7 @@ export default async function EtudePage({
 
       <dl className="m-0 mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 print:mt-6 print:grid-cols-4">
         {[
-          { terme: 'Code client', valeur: etude.client?.code ?? '—' },
+          { terme: 'Référence client', valeur: etude.client?.code ?? '—' },
           {
             terme: 'Pratique',
             valeur: etude.pratique ? LIBELLES_PRATIQUE[etude.pratique] : 'Non renseignée',
@@ -179,10 +178,6 @@ export default async function EtudePage({
           </div>
         ))}
       </dl>
-
-      <div className={`${BLOC} mt-4 p-5 print:mt-5 print:rounded-none print:border-0 print:p-0`}>
-        <NomCycliste />
-      </div>
 
       <section aria-labelledby="titre-mesures" className="mt-12 print:mt-8">
         <h2 id="titre-mesures" className={SURTITRE}>

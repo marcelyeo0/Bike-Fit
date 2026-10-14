@@ -14,9 +14,12 @@ import { SELECTION_ETUDE, type EtudeResumee } from './dashboard';
  * indiscernable d'une fiche qui n'existe pas — les fonctions renvoient `null`
  * ou `false`, et l'appelant repond 404.
  *
- * Le client n'est qu'un code : aucune de ces fonctions ne lit ni n'ecrit de
- * nom, de contact ou de texte libre.
+ * Le client est connu par son nom, saisi par l'atelier ; le code `AX-0001`
+ * reste une reference secondaire. Aucun contact ni texte libre n'est stocke.
  */
+
+/** Ce que les formulaires de fiche envoient : le nom et les mensurations. */
+export type DonneesClient = Mensurations & { nom: string };
 
 /** `AX-0001`. Au-dela de 9999 le code s'allonge, il ne se tronque pas. */
 function formaterCode(numero: number): string {
@@ -26,6 +29,7 @@ function formaterCode(numero: number): string {
 export type ClientDuCarnet = {
   id: string;
   code: string;
+  nom: string;
   tailleCm: number | null;
   entrejambeCm: number | null;
   nombreEtudes: number;
@@ -40,6 +44,7 @@ export async function lireCarnet(userId: string): Promise<ClientDuCarnet[]> {
     select: {
       id: true,
       code: true,
+      nom: true,
       tailleCm: true,
       entrejambeCm: true,
       _count: { select: { studies: true } },
@@ -51,6 +56,7 @@ export async function lireCarnet(userId: string): Promise<ClientDuCarnet[]> {
   return lignes.map((ligne) => ({
     id: ligne.id,
     code: ligne.code,
+    nom: ligne.nom,
     tailleCm: ligne.tailleCm,
     entrejambeCm: ligne.entrejambeCm,
     nombreEtudes: ligne._count.studies,
@@ -58,18 +64,21 @@ export async function lireCarnet(userId: string): Promise<ClientDuCarnet[]> {
   }));
 }
 
-/** Les codes de CET atelier, pour le selecteur du formulaire d'etude. */
-export async function lireCodesClients(userId: string): Promise<{ id: string; code: string }[]> {
+/** Les clients de CET atelier par ordre alphabetique, pour le selecteur du formulaire d'etude. */
+export async function lireClientsSelecteur(
+  userId: string
+): Promise<{ id: string; code: string; nom: string }[]> {
   return db.client.findMany({
     where: { userId },
-    orderBy: { createdAt: 'desc' },
-    select: { id: true, code: true },
+    orderBy: [{ nom: 'asc' }, { createdAt: 'desc' }],
+    select: { id: true, code: true, nom: true },
   });
 }
 
 export type FicheClient = {
   id: string;
   code: string;
+  nom: string;
   tailleCm: number | null;
   entrejambeCm: number | null;
   createdAt: Date;
@@ -83,6 +92,7 @@ export async function lireFicheClient(userId: string, clientId: string): Promise
     select: {
       id: true,
       code: true,
+      nom: true,
       tailleCm: true,
       entrejambeCm: true,
       createdAt: true,
@@ -112,7 +122,7 @@ export async function lireFicheClient(userId: string, clientId: string): Promise
  */
 export async function creerClient(
   userId: string,
-  mensurations: Mensurations
+  donnees: DonneesClient
 ): Promise<{ id: string; code: string }> {
   return db.$transaction(async (tx) => {
     const { dernierNumeroClient } = await tx.user.update({
@@ -125,23 +135,24 @@ export async function creerClient(
       data: {
         userId,
         code: formaterCode(dernierNumeroClient),
-        tailleCm: mensurations.tailleCm,
-        entrejambeCm: mensurations.entrejambeCm,
+        nom: donnees.nom,
+        tailleCm: donnees.tailleCm,
+        entrejambeCm: donnees.entrejambeCm,
       },
       select: { id: true, code: true },
     });
   });
 }
 
-/** Faux si le client n'est pas a cet atelier (aucune ligne touchee). */
-export async function modifierMensurations(
+/** Nom et mensurations. Faux si le client n'est pas a cet atelier (aucune ligne touchee). */
+export async function modifierClient(
   userId: string,
   clientId: string,
-  mensurations: Mensurations
+  donnees: DonneesClient
 ): Promise<boolean> {
   const { count } = await db.client.updateMany({
     where: { id: clientId, userId },
-    data: { tailleCm: mensurations.tailleCm, entrejambeCm: mensurations.entrejambeCm },
+    data: { nom: donnees.nom, tailleCm: donnees.tailleCm, entrejambeCm: donnees.entrejambeCm },
   });
   if (count === 0) return false;
 

@@ -9,7 +9,7 @@ import { lireFicheClient } from '../../../../../lib/requetes/clients';
 import { formaterCm, formaterDate } from '../../../../../lib/libelles';
 import CarteEtude from '../../_composants/CarteEtude';
 import BoutonSuppression from '../../../_composants/BoutonSuppression';
-import ChampsMensurations from '../../../_composants/ChampsMensurations';
+import ChampsClient from '../../../_composants/ChampsClient';
 import {
   BLOC,
   BOUTON_CONTOUR,
@@ -18,7 +18,7 @@ import {
   MESSAGE_INFO,
   SURTITRE,
 } from '../../../_composants/classes';
-import { actionModifierMensurations, actionSupprimerClient } from '../actions';
+import { actionModifierClient, actionSupprimerClient } from '../actions';
 
 export const metadata: Metadata = {
   title: 'Fiche client - Axio',
@@ -58,9 +58,10 @@ export default async function FicheClientPage({
       <header className="mt-5 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className={SURTITRE}>Client</p>
-          <h1 className="m-0 mt-2 font-display text-titre-sm text-encre">{client.code}</h1>
+          <h1 className="m-0 mt-2 font-display text-titre-sm text-encre">{client.nom}</h1>
           <p className="m-0 mt-3 text-[15.5px] leading-[1.6] text-texte-doux">
-            Créé le {formaterDate(client.createdAt)}.
+            Créé le {formaterDate(client.createdAt)}
+            <span className="ml-2 font-mono text-[13px] text-gris">{client.code}</span>
           </p>
         </div>
 
@@ -71,32 +72,37 @@ export default async function FicheClientPage({
 
       {parametres.cree === '1' && (
         <p role="status" className={`${MESSAGE_INFO} mt-6`}>
-          Client créé. Reportez le code {client.code} sur votre fiche d’atelier : Axio ne connaît
-          pas le nom du cycliste.
+          Client créé.
         </p>
       )}
       {parametres.maj === '1' && (
         <p role="status" className={`${MESSAGE_INFO} mt-6`}>
-          Mensurations enregistrées.
+          Fiche enregistrée.
         </p>
       )}
 
       <section aria-labelledby="titre-mensurations" className={`${BLOC} mt-8 p-7`}>
         <h2 id="titre-mensurations" className="m-0 text-[17px] font-semibold text-encre">
-          Mensurations
+          Fiche
         </h2>
         <p className="m-0 mt-2 text-[14px] leading-[1.6] text-texte-doux">
           Taille {formaterCm(client.tailleCm)}, entrejambe {formaterCm(client.entrejambeCm)}.
         </p>
 
-        <form action={actionModifierMensurations} className="mt-6">
+        <form action={actionModifierClient} className="mt-6">
           <input type="hidden" name="id" value={client.id} />
-          <ChampsMensurations
+          <ChampsClient
             prefixe="fiche"
+            nom={client.nom}
             tailleCm={client.tailleCm}
             entrejambeCm={client.entrejambeCm}
           />
 
+          {parametres.erreur === 'nom' && (
+            <p role="alert" className={`${MESSAGE_ERREUR} mt-4`}>
+              Saisissez le nom du cycliste, 80 caractères au plus.
+            </p>
+          )}
           {parametres.erreur === 'mensurations' && (
             <p role="alert" className={`${MESSAGE_ERREUR} mt-4`}>
               Mensurations hors limites. Saisissez des centimètres, par exemple 178 et 84,5.
@@ -104,7 +110,7 @@ export default async function FicheClientPage({
           )}
 
           <button type="submit" className={`${BOUTON_CONTOUR} mt-6`}>
-            Enregistrer les mensurations
+            Enregistrer la fiche
           </button>
         </form>
       </section>
@@ -134,7 +140,7 @@ export default async function FicheClientPage({
         <p className="m-0 mt-2 max-w-[640px] text-[14px] leading-[1.6] text-texte-doux">
           L’export réunit les mensurations, les études, les mesures et les recommandations de
           {' '}
-          {client.code} dans un fichier JSON, à remettre au cycliste s’il demande ses données.
+          {client.nom} dans un fichier JSON, à remettre au cycliste s’il demande ses données.
         </p>
 
         {/* Route handler, pas une page : `<a download>` et non `<Link>`, qui
@@ -156,8 +162,8 @@ export default async function FicheClientPage({
             libelle="Supprimer le client"
             avertissement={
               nombreEtudes === 0
-                ? `Le client ${client.code} sera supprimé.`
-                : `Le client ${client.code} sera supprimé, avec ses ${nombreEtudes} étude${
+                ? `${client.nom} sera supprimé.`
+                : `${client.nom} sera supprimé, avec ses ${nombreEtudes} étude${
                     nombreEtudes > 1 ? 's' : ''
                   }, leurs mesures et leurs recommandations.`
             }

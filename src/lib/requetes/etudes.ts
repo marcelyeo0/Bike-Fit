@@ -69,7 +69,7 @@ export type EtudeDetaillee = {
   objectif: Objectif | null;
   /** Taille de cadre estimee, figee a l'enregistrement de la seance. */
   cadreConseille: string | null;
-  client: { id: string; code: string } | null;
+  client: { id: string; code: string; nom: string } | null;
   measurements: {
     id: string;
     joint: Joint;
@@ -108,7 +108,7 @@ export async function lireEtude(userId: string, etudeId: string): Promise<EtudeD
       pratique: true,
       objectif: true,
       cadreConseille: true,
-      client: { select: { id: true, code: true } },
+      client: { select: { id: true, code: true, nom: true } },
       measurements: {
         orderBy: { joint: 'asc' },
         select: {

@@ -79,10 +79,9 @@ export type EtudeResumee = {
   pratique: Pratique | null;
   objectif: Objectif | null;
   /**
-   * Nul tant qu'aucune fiche client n'est rattachee — voir `titre`. Le client
-   * n'est qu'un code : le serveur ne connait pas l'identite du cycliste.
+   * Nul tant qu'aucune fiche client n'est rattachee — voir `titre`.
    */
-  client: { code: string } | null;
+  client: { code: string; nom: string } | null;
   measurements: {
     joint: Joint;
     value: number;
@@ -101,7 +100,7 @@ export const SELECTION_ETUDE = {
   titre: true,
   pratique: true,
   objectif: true,
-  client: { select: { code: true } },
+  client: { select: { code: true, nom: true } },
   measurements: {
     select: { joint: true, value: true, targetMin: true, targetMax: true, status: true },
   },

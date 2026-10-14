@@ -103,9 +103,14 @@ model Client {
   id     String @id @default(cuid())
   userId String
 
-  /// Pseudonyme, format `AX-0001`. Sequentiel par atelier, genere cote
-  /// serveur (voir `User.dernierNumeroClient`), jamais saisi.
+  /// Reference d'atelier, format `AX-0001`. Sequentielle par atelier,
+  /// generee cote serveur (voir `User.dernierNumeroClient`), jamais saisie.
   code String
+
+  /// Nom du cycliste tel que l'atelier le saisit (« Prenom Nom »). C'est ce
+  /// que l'interface affiche ; le code reste la reference secondaire.
+  /// Donnee personnelle : jamais transmise a Gemini ni ecrite dans les journaux.
+  nom String
 
   /// Mensurations saisies a la main, en centimetres. Optionnelles.
   tailleCm     Float?
@@ -119,6 +124,7 @@ model Client {
   /// Seconde barriere contre les doublons de code, apres le compteur.
   @@unique([userId, code])
   @@index([userId])
+  @@index([userId, nom])
 }
 
 /// Une seance d'analyse posturale. Ne contient aucun media : uniquement le

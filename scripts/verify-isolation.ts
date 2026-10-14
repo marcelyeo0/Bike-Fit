@@ -78,7 +78,7 @@ async function main() {
     // 25 creations lancees en meme temps sur le meme atelier.
     const crees = await Promise.all(
       Array.from({ length: 25 }, () =>
-        clients.creerClient(ID_A, { tailleCm: null, entrejambeCm: null })
+        clients.creerClient(ID_A, { nom: 'Client A', tailleCm: null, entrejambeCm: null })
       )
     );
     const codes = crees.map((client) => client.code).sort();
@@ -88,12 +88,12 @@ async function main() {
       `sequence continue de AX-0001 a AX-0025 (obtenu ${codes[0]} .. ${codes[24]})`
     );
 
-    const clientB = await clients.creerClient(ID_B, { tailleCm: 180, entrejambeCm: 86.5 });
+    const clientB = await clients.creerClient(ID_B, { nom: 'Client B', tailleCm: 180, entrejambeCm: 86.5 });
     verifier(clientB.code === 'AX-0001', 'la numerotation repart de AX-0001 pour un autre atelier');
 
     const supprimeA = crees[24];
     await clients.supprimerClient(ID_A, supprimeA.id);
-    const suivant = await clients.creerClient(ID_A, { tailleCm: null, entrejambeCm: null });
+    const suivant = await clients.creerClient(ID_A, { nom: 'Client A', tailleCm: null, entrejambeCm: null });
     verifier(suivant.code === 'AX-0026', 'un code supprime n’est pas reattribue (AX-0026)');
 
     console.log('Isolation des clients');
@@ -103,7 +103,7 @@ async function main() {
       'B ne lit pas la fiche d’un client de A'
     );
     verifier(
-      (await clients.modifierMensurations(ID_B, clientA.id, { tailleCm: 150, entrejambeCm: 70 })) ===
+      (await clients.modifierClient(ID_B, clientA.id, { nom: 'Intrus', tailleCm: 150, entrejambeCm: 70 })) ===
         false,
       'B ne modifie pas un client de A'
     );
@@ -117,7 +117,7 @@ async function main() {
     );
     const ficheA = await clients.lireFicheClient(ID_A, clientA.id);
     verifier(
-      ficheA !== null && ficheA.tailleCm === null,
+      ficheA !== null && ficheA.tailleCm === null && ficheA.nom === 'Client A',
       'le client de A est intact apres les tentatives de B'
     );
     verifier(
@@ -170,8 +170,8 @@ async function main() {
     );
     const exportA = await exports.exporterClient(ID_A, clientA.id);
     verifier(
-      exportA !== null && exportA.client.etudes.length === 1 && !('nom' in exportA.client),
-      'l’export du client de A porte son etude et aucun nom'
+      exportA !== null && exportA.client.etudes.length === 1 && !texteExportB.includes(exportA.client.nom),
+      'l’export du client de A porte son etude, et son nom ne fuit pas chez B'
     );
 
     console.log('Pagination et filtre');
@@ -249,7 +249,7 @@ async function main() {
     });
     verifier(figees.plagesSeance !== null, 'les fourchettes sont figees sur l etude');
 
-    await clients.modifierMensurations(ID_B, clientB.id, { tailleCm: 180, entrejambeCm: 80 });
+    await clients.modifierClient(ID_B, clientB.id, { nom: 'Client B', tailleCm: 180, entrejambeCm: 80 });
     const apres = await db.study.findUniqueOrThrow({
       where: { id: etudeB.id },
       select: { plagesSeance: true },
@@ -258,7 +258,7 @@ async function main() {
       apres.plagesSeance === null,
       'modifier les mensurations remet a zero les fourchettes du brouillon'
     );
-    await clients.modifierMensurations(ID_B, clientB.id, { tailleCm: 180, entrejambeCm: 86.5 });
+    await clients.modifierClient(ID_B, clientB.id, { nom: 'Client B', tailleCm: 180, entrejambeCm: 86.5 });
 
     verifier(etudes.lireAngles({ KNEE: 156, HIP: 52, ELBOW: 158 }) === null, 'angles incomplets refuses');
     verifier(

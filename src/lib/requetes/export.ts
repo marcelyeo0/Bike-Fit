@@ -76,6 +76,7 @@ function mettreEnFormeEtude(etude: EtudeBrute) {
 
 type ClientBrut = {
   code: string;
+  nom: string;
   tailleCm: number | null;
   entrejambeCm: number | null;
   createdAt: Date;
@@ -84,6 +85,7 @@ type ClientBrut = {
 
 function mettreEnFormeClient(client: ClientBrut) {
   return {
+    nom: client.nom,
     code: client.code,
     tailleCm: client.tailleCm,
     entrejambeCm: client.entrejambeCm,
@@ -98,6 +100,7 @@ export async function exporterClient(userId: string, clientId: string) {
     where: { id: clientId, userId },
     select: {
       code: true,
+      nom: true,
       tailleCm: true,
       entrejambeCm: true,
       createdAt: true,
@@ -112,7 +115,8 @@ export async function exporterClient(userId: string, clientId: string) {
 
   return {
     format: 'axio.export.client',
-    version: 1,
+    // 2 : ajout de `client.nom`.
+    version: 2,
     exporteLe: new Date().toISOString(),
     client: mettreEnFormeClient(client),
   };
@@ -136,6 +140,7 @@ export async function exporterAtelier(userId: string) {
       orderBy: { createdAt: 'asc' },
       select: {
         code: true,
+        nom: true,
         tailleCm: true,
         entrejambeCm: true,
         createdAt: true,
@@ -155,7 +160,8 @@ export async function exporterAtelier(userId: string) {
 
   return {
     format: 'axio.export.atelier',
-    version: 1,
+    // 2 : ajout de `clients[].nom`.
+    version: 2,
     exporteLe: new Date().toISOString(),
     atelier: atelier
       ? {

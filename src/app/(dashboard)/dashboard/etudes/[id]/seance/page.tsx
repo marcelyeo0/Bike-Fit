@@ -2,13 +2,13 @@ import React from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
-import { ArrowLeft } from '@phosphor-icons/react/dist/ssr';
+import { ArrowLeft, SignOut } from '@phosphor-icons/react/dist/ssr';
 import { requireUser } from '../../../../../../lib/auth';
 import { lireIdentifiant } from '../../../../../../lib/saisie';
 import { lireEtude } from '../../../../../../lib/requetes/etudes';
 import { ouvrirSeance } from '../../../../../../lib/requetes/plages';
 import { formaterCadre } from '../../../../../../lib/libelles';
-import { LIEN_DISCRET, SURTITRE } from '../../../../_composants/classes';
+import { BOUTON_CONTOUR, LIEN_DISCRET, SURTITRE } from '../../../../_composants/classes';
 import SeanceCapture from './_composants/SeanceCapture';
 
 export const metadata: Metadata = {
@@ -52,12 +52,21 @@ export default async function SeancePage({ params }: { params: Promise<{ id: str
         Retour à l’étude
       </Link>
 
-      <header className="mt-5">
-        <p className={SURTITRE}>Séance de capture</p>
-        <h1 className="m-0 mt-2 font-display text-titre-sm text-encre">
-          {contexte.codeClient ?? 'Étude sans client'}
-        </h1>
-        {cadre && <p className="m-0 mt-3 text-[14px] font-medium text-texte">{cadre}</p>}
+      <header className="mt-5 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className={SURTITRE}>Séance de capture</p>
+          <h1 className="m-0 mt-2 font-display text-titre-sm text-encre">
+            {etude.client?.nom ?? 'Étude sans client'}
+          </h1>
+          {cadre && <p className="m-0 mt-3 text-[14px] font-medium text-texte">{cadre}</p>}
+        </div>
+
+        {/* Sortie sans enregistrer : l'etude reste en brouillon et se reprend
+            plus tard. La camera est coupee au demontage de SeanceCapture. */}
+        <Link href="/dashboard/etudes" className={BOUTON_CONTOUR}>
+          <SignOut size={17} weight="regular" />
+          Quitter la séance
+        </Link>
       </header>
 
       <SeanceCapture

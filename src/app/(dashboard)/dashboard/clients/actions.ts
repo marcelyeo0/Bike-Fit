@@ -3,11 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import { notFound, redirect } from 'next/navigation';
 import { requireUser } from '../../../../lib/auth';
-import { lireIdentifiant, lireMensurations } from '../../../../lib/saisie';
+import { lireIdentifiant, lireMensurations, lireNom } from '../../../../lib/saisie';
 import {
   creerClient,
-  modifierMensurations,
+  modifierClient,
   supprimerClient,
+  type DonneesClient,
 } from '../../../../lib/requetes/clients';
 
 /**
@@ -26,8 +27,20 @@ import {
  */
 
 /**
- * Cree un client. Le code est attribue par le serveur ; le formulaire ne
- * porte que les mensurations.
+ * Le nom et les mensurations d'un formulaire de fiche, ou le motif de refus
+ * a afficher (`?erreur=nom` ou `?erreur=mensurations`).
+ */
+function lireFiche(donnees: FormData): DonneesClient | 'nom' | 'mensurations' {
+  const nom = lireNom(donnees.get('nom'));
+  if (!nom) return 'nom';
+  const mensurations = lireMensurations(donnees);
+  if (!mensurations) return 'mensurations';
+  return { nom, ...mensurations };
+}
+
+/**
+ * Cree un client. Le code est attribue par le serveur ; le formulaire porte
+ * le nom et les mensurations.
  *
  * `retour=etude` : le formulaire vient de la page « Nouvelle etude » (carnet
  * vide) et y ramene, client preselectionne. La valeur est comparee a une
@@ -39,10 +52,10 @@ export async function actionCreerClient(donnees: FormData): Promise<void> {
   const versEtude = donnees.get('retour') === 'etude';
   const origine = versEtude ? '/dashboard/etudes/nouvelle' : '/dashboard/clients';
 
-  const mensurations = lireMensurations(donnees);
-  if (!mensurations) redirect(`${origine}?erreur=mensurations`);
+  const fiche = lireFiche(donnees);
+  if (typeof fiche === 'string') redirect(`${origine}?erreur=${fiche}`);
 
-  const client = await creerClient(utilisateur.id, mensurations);
+  const client = await creerClient(utilisateur.id, fiche);
 
   revalidatePath('/dashboard');
   console.info(`[clients] ${client.code} cree pour ${utilisateur.id}`);
@@ -54,19 +67,19 @@ export async function actionCreerClient(donnees: FormData): Promise<void> {
   );
 }
 
-/** Modifie les mensurations d'un client de l'atelier. */
-export async function actionModifierMensurations(donnees: FormData): Promise<void> {
+/** Modifie le nom et les mensurations d'un client de l'atelier. */
+export async function actionModifierClient(donnees: FormData): Promise<void> {
   const utilisateur = await requireUser();
 
   const clientId = lireIdentifiant(donnees.get('id'));
   if (!clientId) notFound();
 
-  const mensurations = lireMensurations(donnees);
+  const fiche = lireFiche(donnees);
   // La page cible refait elle-meme le controle d'appartenance : si la fiche
   // n'est pas a l'atelier, cette redirection aboutit a un 404.
-  if (!mensurations) redirect(`/dashboard/clients/${clientId}?erreur=mensurations`);
+  if (typeof fiche === 'string') redirect(`/dashboard/clients/${clientId}?erreur=${fiche}`);
 
-  const modifie = await modifierMensurations(utilisateur.id, clientId, mensurations);
+  const modifie = await modifierClient(utilisateur.id, clientId, fiche);
   if (!modifie) {
     console.warn(`[access] client ${clientId} hors perimetre de ${utilisateur.id}`);
     notFound();

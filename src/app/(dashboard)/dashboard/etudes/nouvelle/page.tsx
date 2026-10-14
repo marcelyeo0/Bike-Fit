@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 import { Gift, Plus } from '@phosphor-icons/react/dist/ssr';
 import { requireUser } from '../../../../../lib/auth';
 import { canCreateStudy } from '../../../../../lib/access';
-import { lireCodesClients } from '../../../../../lib/requetes/clients';
+import { lireClientsSelecteur } from '../../../../../lib/requetes/clients';
 import { MESSAGES_REFUS, estRefus } from '../../../../../lib/messagesAcces';
 import {
   LIBELLES_OBJECTIF,
@@ -12,7 +12,7 @@ import {
   OBJECTIFS,
   PRATIQUES,
 } from '../../../../../lib/libelles';
-import ChampsMensurations from '../../../_composants/ChampsMensurations';
+import ChampsClient from '../../../_composants/ChampsClient';
 import {
   BLOC,
   BOUTON_CONTOUR,
@@ -79,7 +79,7 @@ export default async function NouvelleEtudePage({
   const utilisateur = await requireUser();
   const [autorisation, clients, parametres] = await Promise.all([
     canCreateStudy(utilisateur),
-    lireCodesClients(utilisateur.id),
+    lireClientsSelecteur(utilisateur.id),
     searchParams,
   ]);
 
@@ -130,14 +130,19 @@ export default async function NouvelleEtudePage({
             Commencez par créer un client
           </h2>
           <p className="m-0 mt-2 text-[14px] leading-[1.6] text-texte-doux">
-            Une étude se rattache à un client, et votre carnet est vide. Le client reçoit un code
-            (AX-0001) ; Axio n’enregistre ni nom ni contact.
+            Une étude se rattache à un client, et votre carnet est vide. Saisissez son nom ; les
+            mensurations sont facultatives.
           </p>
 
           <form action={actionCreerClient} className="mt-6">
             <input type="hidden" name="retour" value="etude" />
-            <ChampsMensurations prefixe="premier" />
+            <ChampsClient prefixe="premier" />
 
+            {parametres.erreur === 'nom' && (
+              <p role="alert" className={`${MESSAGE_ERREUR} mt-4`}>
+                Saisissez le nom du cycliste, 80 caractères au plus.
+              </p>
+            )}
             {parametres.erreur === 'mensurations' && (
               <p role="alert" className={`${MESSAGE_ERREUR} mt-4`}>
                 Mensurations hors limites. Saisissez des centimètres, par exemple 178 et 84,5.
@@ -159,7 +164,7 @@ export default async function NouvelleEtudePage({
         <form action={actionCreerEtude} className={`${BLOC} mt-6 p-7`}>
           <div className="flex items-baseline justify-between gap-4">
             <label htmlFor="clientId" className={ETIQUETTE}>
-              Code client
+              Cycliste
             </label>
             <Link href="/dashboard/clients" className={LIEN_DISCRET}>
               Nouveau client
@@ -174,11 +179,11 @@ export default async function NouvelleEtudePage({
             className={CHAMP}
           >
             <option value="" disabled>
-              Sélectionner un code
+              Sélectionner un client
             </option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>
-                {client.code}
+                {client.nom} ({client.code})
               </option>
             ))}
           </select>
@@ -201,7 +206,7 @@ export default async function NouvelleEtudePage({
 
           {parametres.erreur === 'champs' && (
             <p role="alert" className={`${MESSAGE_ERREUR} mt-5`}>
-              Sélectionnez un code client, une pratique et un objectif.
+              Sélectionnez un client, une pratique et un objectif.
             </p>
           )}
 

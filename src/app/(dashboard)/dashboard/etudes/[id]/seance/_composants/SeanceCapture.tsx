@@ -33,6 +33,7 @@ import {
   BOUTON_CONTOUR,
   BOUTON_PRIMAIRE,
   LIEN_ACCENT,
+  LIEN_DISCRET,
   MESSAGE_ERREUR,
   MESSAGE_INFO,
   SURTITRE,
@@ -671,6 +672,9 @@ export default function SeanceCapture({
               Il manque encore : {manquants.map((a) => LIBELLES_JOINT[a].toLowerCase()).join(', ')}.
             </p>
           )}
+          <Link href="/dashboard/etudes" className={`${LIEN_DISCRET} self-start`}>
+            Quitter sans enregistrer : l’étude reste en brouillon
+          </Link>
           <p className="m-0 text-[13px] leading-[1.5] text-gris">
             L’enregistrement termine l’étude avec les mesures affichées. Outil d’aide au réglage, ne
             constitue pas un avis médical.

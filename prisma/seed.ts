@@ -20,8 +20,8 @@ import {
  * Les mesures et recommandations n'ont pas de cle naturelle : on les supprime
  * puis on les recree, plutot que de tenter un upsert ligne a ligne.
  *
- * Aucune identite : les clients de demonstration sont des codes, comme ceux
- * d'un atelier reel. Ni nom, ni contact, ni texte libre.
+ * Les clients de demonstration portent des noms fictifs : l'etude de
+ * demonstration est lisible par tous les ateliers. Ni contact, ni texte libre.
  */
 
 const url = process.env.DATABASE_URL;
@@ -120,10 +120,11 @@ async function main() {
 
   const clientA = await db.client.upsert({
     where: { userId_code: { userId: utilisateur.id, code: CODE_CLIENT_A } },
-    update: {},
+    update: { nom: 'Camille Martin' },
     create: {
       userId: utilisateur.id,
       code: CODE_CLIENT_A,
+      nom: 'Camille Martin',
       tailleCm: 178,
       entrejambeCm: 84.5,
     },
@@ -131,10 +132,11 @@ async function main() {
 
   await db.client.upsert({
     where: { userId_code: { userId: utilisateur.id, code: CODE_CLIENT_B } },
-    update: {},
+    update: { nom: 'Louis Bernard' },
     create: {
       userId: utilisateur.id,
       code: CODE_CLIENT_B,
+      nom: 'Louis Bernard',
       tailleCm: 171,
       entrejambeCm: 80,
     },

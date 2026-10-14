@@ -5,7 +5,7 @@ import { Plus } from '@phosphor-icons/react/dist/ssr';
 import { requireUser } from '../../../../lib/auth';
 import { lireCarnet } from '../../../../lib/requetes/clients';
 import { formaterCm, formaterDate } from '../../../../lib/libelles';
-import ChampsMensurations from '../../_composants/ChampsMensurations';
+import ChampsClient from '../../_composants/ChampsClient';
 import EtatVide from '../../_composants/EtatVide';
 import {
   BLOC,
@@ -27,8 +27,8 @@ export const metadata: Metadata = {
  * `lireCarnet(userId)`. Le formulaire poste vers une server action qui refait
  * le controle d'identite.
  *
- * Un client est un code attribue par le serveur : la page ne demande ni nom
- * ni contact, et n'en affiche aucun.
+ * Un client est connu par son nom ; le code attribue par le serveur reste une
+ * reference secondaire. La page ne demande aucun contact.
  */
 export default async function ClientsPage({
   searchParams,
@@ -43,8 +43,8 @@ export default async function ClientsPage({
       <header>
         <h1 className="m-0 font-display text-titre-sm text-encre">Clients</h1>
         <p className="m-0 mt-3 max-w-[640px] text-[15.5px] leading-[1.6] text-texte-doux">
-          Chaque cycliste est un code. Axio n’enregistre ni nom ni contact : la correspondance
-          entre un code et une personne reste dans votre atelier.
+          Vos cyclistes, leurs mensurations et l’historique de leurs études. Axio n’enregistre
+          aucun contact : seulement le nom et les mesures utiles au réglage.
         </p>
       </header>
 
@@ -59,13 +59,18 @@ export default async function ClientsPage({
           Nouveau client
         </h2>
         <p className="m-0 mt-2 text-[14px] leading-[1.6] text-texte-doux">
-          Le code est attribué automatiquement. Les mensurations sont facultatives et
-          modifiables ensuite.
+          Les mensurations sont facultatives. Tout reste modifiable depuis la fiche du
+          client.
         </p>
 
         <form action={actionCreerClient} className="mt-6">
-          <ChampsMensurations prefixe="nouveau" />
+          <ChampsClient prefixe="nouveau" />
 
+          {parametres.erreur === 'nom' && (
+            <p role="alert" className={`${MESSAGE_ERREUR} mt-4`}>
+              Saisissez le nom du cycliste, 80 caractères au plus.
+            </p>
+          )}
           {parametres.erreur === 'mensurations' && (
             <p role="alert" className={`${MESSAGE_ERREUR} mt-4`}>
               Mensurations hors limites. Saisissez des centimètres, par exemple 178 et 84,5.
@@ -88,8 +93,8 @@ export default async function ClientsPage({
           {clients.length === 0 ? (
             <EtatVide image="/assets/etape-analyse.jpg" titre="Votre carnet est vide">
               <p className="m-0">
-                Créez votre premier client ci-dessus : il recevra le code AX-0001. Notez ce code
-                sur votre fiche d’atelier, c’est lui qui relie le cycliste à ses études.
+                Créez votre premier client ci-dessus : ses études et ses mensurations seront
+                regroupées sur sa fiche.
               </p>
             </EtatVide>
           ) : (
@@ -98,7 +103,7 @@ export default async function ClientsPage({
                 <thead>
                   <tr className="border-b border-ligne font-mono text-[11px] uppercase tracking-[.08em] text-gris">
                     <th scope="col" className="px-6 py-4 font-semibold">
-                      Code
+                      Cycliste
                     </th>
                     <th scope="col" className="px-6 py-4 font-semibold">
                       Taille
@@ -117,13 +122,16 @@ export default async function ClientsPage({
                 <tbody>
                   {clients.map((client) => (
                     <tr key={client.id} className="border-b border-ligne-douce last:border-b-0">
-                      <th scope="row" className="px-6 py-4 font-mono font-medium">
+                      <th scope="row" className="px-6 py-4 font-medium">
                         <Link
                           href={`/dashboard/clients/${client.id}`}
                           className="text-encre underline decoration-ligne underline-offset-4 transition-colors hover:decoration-encre"
                         >
-                          {client.code}
+                          {client.nom}
                         </Link>
+                        <span className="ml-2 font-mono text-[12px] font-normal text-gris">
+                          {client.code}
+                        </span>
                       </th>
                       <td className="px-6 py-4 font-mono tabular-nums text-texte">{formaterCm(client.tailleCm)}</td>
                       <td className="px-6 py-4 font-mono tabular-nums text-texte">{formaterCm(client.entrejambeCm)}</td>

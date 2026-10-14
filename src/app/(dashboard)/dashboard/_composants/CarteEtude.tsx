@@ -41,9 +41,9 @@ function anglesCles(mesures: EtudeResumee['measurements']) {
 export default function CarteEtude({ etude }: { etude: EtudeResumee }) {
   const mesures = anglesCles(etude.measurements);
 
-  // Le client est un code, jamais un nom. `client` est nullable depuis que
-  // Study.clientId l'est : on retombe sur `titre`, puis sur un libelle neutre.
-  const sujet = etude.client?.code ?? etude.titre ?? 'Étude sans client';
+  // `client` est nullable depuis que Study.clientId l'est : on retombe sur
+  // `titre`, puis sur un libelle neutre.
+  const sujet = etude.client?.nom ?? etude.titre ?? 'Étude sans client';
   const cadre = formaterCadre(etude.pratique, etude.objectif);
 
   return (

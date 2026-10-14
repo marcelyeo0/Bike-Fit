@@ -52,6 +52,20 @@ export function lireMensurations(donnees: FormData): Mensurations | null {
   return { tailleCm: taille.valeur, entrejambeCm: entrejambe.valeur };
 }
 
+export const LONGUEUR_NOM_MAX = 80;
+
+/**
+ * Nom du cycliste (« Prenom Nom »). Obligatoire. Espaces repliees, caracteres
+ * de controle refuses : le nom s'affiche partout et finit dans l'export.
+ */
+export function lireNom(brut: FormDataEntryValue | null): string | null {
+  if (typeof brut !== 'string') return null;
+  const nom = brut.replace(/\s+/g, ' ').trim();
+  if (nom.length === 0 || nom.length > LONGUEUR_NOM_MAX) return null;
+  if (/[\p{Cc}\p{Cf}]/u.test(nom)) return null;
+  return nom;
+}
+
 /** Un identifiant (cuid) : une chaine courte, sans rien d'exotique. */
 export function lireIdentifiant(brut: unknown): string | null {
   if (typeof brut !== 'string') return null;
