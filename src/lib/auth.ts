@@ -14,7 +14,7 @@ import type { User } from '../generated/prisma/client';
  * et le controle de role vivent a un seul endroit.
  *
  * GARDE : ce fichier est le SEUL du projet autorise a importer depuis
- * `@clerk/nextjs/server` (avec `src/middleware.ts`, qui protege les routes en
+ * `@clerk/nextjs/server` (avec `src/proxy.ts`, qui protege les routes en
  * amont, et le webhook, qui n'a pas de session). Une page qui appelle
  * `currentUser()` court-circuite le rattrapage de ligne User ci-dessous et
  * n'a pas d'`id` interne : elle ne peut donc rien filtrer en base.

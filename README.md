@@ -115,7 +115,7 @@ scripts/
   verify-isolation.ts npm run db:isolation
 public/assets/        visuels de la landing, réutilisés par les états vides
 src/
-  middleware.ts       clerkMiddleware : /dashboard et /admin protégés
+  proxy.ts            clerkMiddleware : /dashboard et /admin protégés
   generated/prisma/   client Prisma généré (non versionné)
   app/
     layout.tsx        ClerkProvider, polices, thème Clerk global
