@@ -38,7 +38,7 @@ export const viewport: Viewport = {
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${geist.variable} ${geistMono.variable}`}>
+    <html lang="fr" data-scroll-behavior="smooth" className={`${geist.variable} ${geistMono.variable}`}>
       <body>
         <ClerkProvider
           localization={localisationAxio}
