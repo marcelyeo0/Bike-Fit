@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Trash } from '@phosphor-icons/react';
+import BoutonEnvoi from './BoutonEnvoi';
 import { BOUTON_CONTOUR, BOUTON_DANGER } from './classes';
 
 /**
@@ -44,13 +45,13 @@ export default function BoutonSuppression({
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
+        <BoutonEnvoi
           className="inline-flex h-[42px] w-fit items-center justify-center gap-2 whitespace-nowrap rounded-full bg-rouge-cta px-[18px] text-sm font-semibold text-white transition-colors duration-300 ease-doux hover:bg-rouge-cta-hover"
+          enCours="Suppression…"
+          icone={<Trash size={17} weight="regular" />}
         >
-          <Trash size={17} weight="regular" />
           Confirmer la suppression
-        </button>
+        </BoutonEnvoi>
 
         <button type="button" onClick={() => setConfirmation(false)} className={BOUTON_CONTOUR}>
           Annuler
