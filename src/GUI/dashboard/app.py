@@ -15,15 +15,11 @@ Reproduit la coque du dashboard web (BarreLaterale.tsx + layout) :
 
 Navigation : `aller(nom, **parametres)` détruit la page et reconstruit la
 suivante à partir de la base (comme une requête serveur côté web). Les
-données vivent dans SQLite (src/data/store.py), rien ne sort de la machine
-sauf l'appel facultatif à Gemini pour personnaliser les fourchettes.
+données vivent dans SQLite (src/data/store.py), rien ne sort de la machine.
 """
-
-import threading
 
 import customtkinter as ctk
 
-from src.core import biomeca
 from src.core.angles import AngleRange
 from src.data.store import Store
 from src.GUI import theme as t
@@ -177,40 +173,22 @@ class DashboardApp(ctk.CTk):
     # Séance de capture
     # ------------------------------------------------------------------ #
     def demarrer_seance(self, etude_id, sur_etat):
-        """Fige les fourchettes (Gemini si une clé est configurée, table
-        locale sinon) puis ouvre la fenêtre de capture webcam. L'appel
-        réseau tourne dans un thread : l'interface ne gèle pas."""
-        contexte = self.store.contexte_seance(etude_id)
+        """Fige les fourchettes (règles fixes, instantané) puis ouvre la
+        fenêtre de capture webcam."""
+        sur_etat("Ouverture de la caméra…")
+        contexte = self.store.ouvrir_seance(etude_id)
         if contexte is None:
             sur_etat("Cette étude n’est plus un brouillon : la séance ne peut pas s’ouvrir.")
             return
-
-        sur_etat("Préparation de la séance : fourchettes et caméra…")
-        if contexte["plages_seance"] is not None:
-            self._ouvrir_capture(contexte, contexte["plages_seance"])
-            return
-
-
-        def calculer():
-            ps = biomeca.calculer_plages_seance(contexte["pratique"], contexte["objectif"],
-                                                contexte["taille_cm"], contexte["entrejambe_cm"])
-            self.after(0, lambda: self._fourchettes_pretes(contexte, ps))
-
-        threading.Thread(target=calculer, daemon=True).start()
-
-    def _fourchettes_pretes(self, contexte, ps):
-        self.store.figer_plages(contexte["etude_id"], ps)
-        self._ouvrir_capture(contexte, ps)
+        self._ouvrir_capture(contexte, contexte["plages_seance"])
 
     def _ouvrir_capture(self, contexte, ps):
         from src.GUI.analysis_window import AnalysisWindow
 
         etude_id = contexte["etude_id"]
         plages = {j: AngleRange(*p) for j, p in ps["plages"].items()}
-        source = ("Fourchettes personnalisées (Gemini)" if ps["source"] == "gemini"
-                  else "Fourchettes de la table Axio")
-        source += (", ajustées à la morphologie." if ps["morphologie"]
-                   else ", sans mensurations.")
+        source = ("Fourchettes Axio, ajustées à la morphologie." if ps["morphologie"]
+                  else "Fourchettes Axio, sans mensurations.")
 
         def terminee(valeurs):
             enregistree = self.store.enregistrer_seance(etude_id, valeurs)

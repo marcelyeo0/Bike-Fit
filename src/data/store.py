@@ -311,17 +311,18 @@ class Store:
                          (biomeca.plages_seance_vers_json(ps), etude_id))
         self._db.commit()
 
-    def ouvrir_seance(self, etude_id, externe=True):
+    def ouvrir_seance(self, etude_id):
         """Fourchettes de la séance, calculées une fois puis figées sur
         l'étude. None si l'étude n'est pas un brouillon de l'atelier.
-        Version synchrone : l'interface passe par contexte_seance + thread."""
+        Les fourchettes déjà figées (y compris d'anciennes études calculées
+        par Gemini) sont relues telles quelles."""
         contexte = self.contexte_seance(etude_id)
         if contexte is None:
             return None
         if contexte["plages_seance"] is None:
             ps = biomeca.calculer_plages_seance(
                 contexte["pratique"], contexte["objectif"], contexte["taille_cm"],
-                contexte["entrejambe_cm"], externe)
+                contexte["entrejambe_cm"])
             self.figer_plages(etude_id, ps)
             contexte["plages_seance"] = ps
         return contexte
@@ -330,7 +331,7 @@ class Store:
         """Mesures + consignes + cadre, étude terminée. Faux si aucune
         valeur ou si l'étude n'est plus un brouillon."""
         valeurs = {j: v for j, v in valeurs.items() if v is not None}
-        contexte = self.ouvrir_seance(etude_id, externe=False)
+        contexte = self.ouvrir_seance(etude_id)
         if contexte is None or not valeurs:
             return False
         ps = contexte["plages_seance"]
@@ -447,7 +448,7 @@ class Store:
             self._db.execute("UPDATE study SET created_at = ? WHERE id = ?", (date, eid))
             self._db.commit()
             if valeurs:
-                self.ouvrir_seance(eid, externe=False)
+                self.ouvrir_seance(eid)
                 self.enregistrer_seance(eid, valeurs)
                 self._db.execute("UPDATE study SET completed_at = ? WHERE id = ?", (date, eid))
                 self._db.commit()

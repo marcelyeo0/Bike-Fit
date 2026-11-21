@@ -19,6 +19,7 @@ from tkinter import filedialog
 
 import customtkinter as ctk
 
+from src.core import biomeca
 from src.data import store as store_module
 from src.GUI import theme as t
 from src.GUI.dashboard import composants as c
@@ -265,6 +266,16 @@ def page_etude(app, p, etude_id, info=None):
                                           f"{c.formater_degres(m['target_max'])}", 14.5, role="mono"),
                 lambda q, m=m, g=graisse, co=couleur: c.label(q, c.LIBELLES_MESURE[m["status"]], 14.5, g, co),
             ])
+
+        sources = c.bloc(p)
+        sources.grid(sticky="ew", pady=(12, 0))
+        c.label(sources, "D’OÙ VIENNENT LES FOURCHETTES", 11, couleur=t.GRIS, role="mono").pack(
+            anchor="w", padx=24, pady=(18, 4))
+        for joint in biomeca.ARTICULATIONS:
+            if any(m["joint"] == joint for m in mesures):
+                c.label(sources, biomeca.SOURCES[joint], 13.5, couleur=t.TEXTE_DOUX,
+                        wrap=app.largeur_contenu() - 80).pack(anchor="w", padx=24, pady=(2, 0))
+        ctk.CTkFrame(sources, fg_color="transparent", height=14).pack()
 
     if etude["recommandations"]:
         _section(p, "Recommandations de réglage, par priorité")
@@ -577,9 +588,8 @@ def page_parametres(app, p, info=None):
         c.label(d, "Licence", 17, "bold", t.ENCRE).pack(anchor="w")
         ligne(d, "Formule", "Accès illimité")
         ligne(d, "Version", "Bureau, hors ligne", dernier=True)
-        c.label(d, "Ce poste crée des études sans limite. Les fourchettes sont personnalisées "
-                   "par Gemini quand une clé GEMINI_API_KEY est configurée, sinon calculées "
-                   "par la table Axio.", 14, couleur=t.TEXTE_DOUX, wrap=460).pack(anchor="w", pady=(14, 0))
+        c.label(d, "Ce poste crée des études sans limite. Fourchettes calculées par règles "
+                   "fixes : même profil, même cible.", 14, couleur=t.TEXTE_DOUX, wrap=460).pack(anchor="w", pady=(14, 0))
         return b
 
     c.grille(p, [compte, licence], 2).grid(sticky="ew", pady=(40, 0))

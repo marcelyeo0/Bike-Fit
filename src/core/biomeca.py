@@ -3,8 +3,8 @@ biomeca.py — Fourchettes cibles, statut des mesures, consignes de réglage
 et estimation de cadre.
 
 Portage fidèle de la version web (src/lib/biomeca/{plages,regles,cadre}.ts
-sur la branche web_docker) : le logiciel de bureau et le dashboard web
-produisent les mêmes comptes rendus pour les mêmes mesures.
+sur la branche web_docker), sans l'appel Gemini : ici les fourchettes sont
+toujours calculées par règles fixes (voir calculer_plages_seance).
 
 ATTENTION : comme côté web, les valeurs de la table et les ajustements sont
 des ordres de grandeur usuels, pas des valeurs sourcées. À faire valider par
@@ -15,8 +15,6 @@ Vocabulaire : réglage, position, fourchette, confort. Aucun terme de soin.
 
 import json
 import math
-import os
-import re
 
 # Articulations jugées, dans l'ordre d'affichage. Clés en minuscules : ce
 # sont celles de src/core/angles.py (JOINT_ANGLES).
@@ -209,146 +207,41 @@ def estimer_hauteur_selle(entrejambe_cm):
 
 
 # --------------------------------------------------------------------------- #
-# Source externe (Gemini), validée contre la table locale
+# Fourchettes d'une séance : règles fixes, pas de modèle de langage
 # --------------------------------------------------------------------------- #
-
-_ECART_EXTERNE_MAX = 15
-_LARGEUR_MIN, _LARGEUR_MAX = 4, 30
-_LONGUEUR_CONSEIL_MAX = 260
-_TERMES_EXCLUS = re.compile(
-    r"blessure|douleur|diagnosti|pr[ée]vention|patient|m[ée]dic|th[ée]rap|pathologi",
-    re.IGNORECASE)
-
-_CONSIGNE_SYSTEME = """Tu es un expert en positionnement sur le vélo (bike fitting).
-On te donne le profil d'un cycliste. Tu renvoies :
-1. les fourchettes cibles des angles articulaires, mesurés de profil pendant le pédalage ;
-2. pour chaque articulation et chaque sens d'écart, la consigne de réglage du vélo.
-
-Articulations : knee, hip, elbow, shoulder.
-- knee : angle interne du genou à l'extension maximale (pédale en bas) ;
-- hip : angle épaule-hanche-genou le plus fermé (pédale en haut) ;
-- elbow : angle moyen du coude (épaule-coude-poignet) ;
-- shoulder : angle moyen de l'épaule (coude-épaule-hanche).
-
-Le profil contient la pratique, l'objectif, et si elles sont connues la
-taille et la longueur d'entrejambe en centimètres. Croise ces critères :
-- pratique et objectif fixent la base (aéro : hanche plus fermée ; confort :
-  buste redressé, hanche plus ouverte ; chrono : appui sur prolongateurs) ;
-- le rapport entrejambe / taille renseigne sur les proportions : jambes
-  longues et buste court, ou l'inverse. Ajuste hanche et épaule en conséquence.
-
-Chaque consigne fait deux phrases, à l'infinitif, 30 mots au plus :
-1. le constat de position et sa cause probable sur le vélo ;
-2. l'action de réglage : composant, sens, ordre de grandeur en mm.
-Priorité à la selle (hauteur, recul) pour knee et hip, au poste de pilotage
-(potence, cintre) pour elbow et shoulder.
-"high" = angle mesuré au-dessus de la fourchette, "low" = en dessous.
-
-Vocabulaire imposé : réglage, position, fourchette, confort. N'emploie aucun
-terme de santé ou de soin.
-
-Réponds uniquement avec un objet JSON, au format exact :
-{
-  "ranges": {"knee": [min, max], "hip": [min, max], "elbow": [min, max], "shoulder": [min, max]},
-  "advice": {
-    "knee_high": "...", "knee_low": "...",
-    "hip_high": "...", "hip_low": "...",
-    "elbow_high": "...", "elbow_low": "...",
-    "shoulder_high": "...", "shoulder_low": "..."
-  }
-}
-Les bornes sont des entiers en degrés, entre 0 et 180."""
-
-
-def valider_plages_externes(brut, reference: dict):
-    """(plages, conseils) si la réponse est exploitable, sinon None. Une
-    fourchette absente ou trop loin de la table invalide tout ; les
-    conseils sont filtrés un par un."""
-    if not isinstance(brut, dict) or not isinstance(brut.get("ranges"), dict):
-        return None
-    plages = {}
-    for joint in ARTICULATIONS:
-        paire = brut["ranges"].get(joint)
-        if not isinstance(paire, list) or len(paire) != 2:
-            return None
-        mn, mx = paire
-        if not all(isinstance(v, (int, float)) and not isinstance(v, bool)
-                   and math.isfinite(v) for v in (mn, mx)):
-            return None
-        if mn < 0 or mx > 180 or not (_LARGEUR_MIN <= mx - mn <= _LARGEUR_MAX):
-            return None
-        ref = reference[joint]
-        if abs(mn - ref[0]) > _ECART_EXTERNE_MAX or abs(mx - ref[1]) > _ECART_EXTERNE_MAX:
-            return None
-        plages[joint] = (_arrondi(mn), _arrondi(mx))
-
-    conseils = {}
-    advice = brut.get("advice")
-    if isinstance(advice, dict):
-        for joint in ARTICULATIONS:
-            for sens in ("high", "low"):
-                texte = advice.get(f"{joint}_{sens}")
-                if not isinstance(texte, str):
-                    continue
-                propre = " ".join(texte.split())
-                if 0 < len(propre) <= _LONGUEUR_CONSEIL_MAX and not _TERMES_EXCLUS.search(propre):
-                    conseils[(joint, sens)] = propre
-    return plages, conseils
-
+#
+# Choix assumé : les cibles chiffrées sont DÉTERMINISTES. Même profil, même
+# cible, à chaque séance et sur chaque poste. Un professionnel doit pouvoir
+# demander « d'où vient ce 140–150 ? » et obtenir une réponse fixe. Un modèle
+# de langage reste envisageable pour RÉDIGER un bilan à partir des constats
+# déjà calculés, jamais pour fixer les nombres.
 
 LIBELLES_PRATIQUE = {"ROUTE": "Route", "GRAVEL": "Gravel", "CHRONO": "Chrono / triathlon"}
 LIBELLES_OBJECTIF = {"CONFORT": "Confort", "MIXTE": "Mixte", "AERO": "Aéro"}
 
-
-def _interroger_gemini(pratique, objectif, taille_cm, entrejambe_cm):
-    cle = (os.getenv("GEMINI_API_KEY") or "").strip()
-    if not cle:
-        return None
-    try:
-        from google import genai
-        from google.genai import types
-
-        lignes = [f"Pratique : {LIBELLES_PRATIQUE.get(pratique, 'route')}",
-                  f"Objectif : {LIBELLES_OBJECTIF.get(objectif, 'mixte')}"]
-        if taille_cm is not None:
-            lignes.append(f"Taille : {taille_cm} cm")
-        if entrejambe_cm is not None:
-            lignes.append(f"Entrejambe : {entrejambe_cm} cm")
-
-        client = genai.Client(api_key=cle,
-                              http_options=types.HttpOptions(timeout=20_000))
-        reponse = client.models.generate_content(
-            model="gemini-flash-latest",
-            contents="\n".join(lignes),
-            config=types.GenerateContentConfig(
-                system_instruction=_CONSIGNE_SYSTEME,
-                response_mime_type="application/json",
-                temperature=0.2,
-                max_output_tokens=4000,
-            ),
-        )
-        return json.loads(reponse.text)
-    except Exception as erreur:   # réseau, délai, JSON illisible : jamais bloquant
-        print(f"[biomeca] Gemini indisponible ({type(erreur).__name__}), table locale utilisée")
-        return None
+# D'où viennent les cibles, affiché sur l'étude et le compte rendu. Seul le
+# genou s'appuie sur une référence publiée ; le reste est un ordre de
+# grandeur de fitting, à faire valider — on le dit plutôt que de l'inventer.
+SOURCES = {
+    "knee": "Genou : 140–150° d’extension, soit 30–40° de flexion en bas de "
+            "pédalage (Holmes et al., 1994 ; Ferrer-Roca et al., 2012).",
+    "hip": "Hanche : ordre de grandeur usuel en fitting selon l’objectif, "
+           "ajusté à la pratique et au rapport entrejambe / taille.",
+    "elbow": "Coude : légère flexion sur route, proche de l’équerre sur "
+             "prolongateurs (chrono).",
+    "shoulder": "Épaule : ordre de grandeur usuel selon l’objectif, ajusté à "
+                "la pratique et à la morphologie.",
+}
 
 
-def calculer_plages_seance(pratique, objectif, taille_cm, entrejambe_cm,
-                           externe: bool = True) -> dict:
+def calculer_plages_seance(pratique, objectif, taille_cm, entrejambe_cm) -> dict:
     """Ce qui est figé sur l'étude à l'ouverture de la séance :
-    {"source": "gemini"|"locale", "morphologie": bool,
-     "plages": {joint: (min, max)}, "conseils": {(joint, sens): texte}}."""
-    locale = plages_locales(pratique, objectif, taille_cm, entrejambe_cm)
-    morphologie = taille_cm is not None and entrejambe_cm is not None
-    if externe:
-        valide = valider_plages_externes(
-            _interroger_gemini(pratique, objectif, taille_cm, entrejambe_cm), locale)
-        if valide:
-            plages, conseils = valide
-            return {"source": "gemini", "morphologie": morphologie,
-                    "plages": plages, "conseils": conseils}
-    return {"source": "locale", "morphologie": morphologie,
-            "plages": locale, "conseils": {}}
+    {"source": "locale", "morphologie": bool,
+     "plages": {joint: (min, max)}, "conseils": {}}."""
+    return {"source": "locale",
+            "morphologie": taille_cm is not None and entrejambe_cm is not None,
+            "plages": plages_locales(pratique, objectif, taille_cm, entrejambe_cm),
+            "conseils": {}}
 
 
 def plages_seance_vers_json(ps: dict) -> str:

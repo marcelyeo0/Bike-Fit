@@ -11,6 +11,7 @@ import html
 import os
 import webbrowser
 
+from src.core import biomeca
 from src.data.store import dossier_donnees
 from src.GUI.dashboard import composants as c
 
@@ -45,6 +46,7 @@ li { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid #E9E9E9
 .rang { flex: none; width: 28px; height: 28px; border-radius: 50%; background: #0C0C0C; color: #fff;
         font: 600 12px/28px "Cascadia Mono", Consolas, monospace; text-align: center; }
 li p { margin: 0; }
+.sources { margin: 10px 0 0; font-size: 12px; color: #5A5A5A; }
 .mention { margin-top: 32px; border-top: 1px solid #0C0C0C; padding-top: 12px; font-size: 12.5px; }
 @media screen { body { background: #F6F6F5; } main { background: #fff; padding: 48px 56px;
   margin: 32px auto; border: 1px solid #E9E9E9; border-radius: 24px; } }
@@ -66,6 +68,12 @@ def construire(etude: dict, atelier: str) -> str:
     mesures = (f"<table><thead><tr><th>Articulation</th><th>Valeur</th><th>Fourchette cible</th>"
                f"<th>Statut</th></tr></thead><tbody>{lignes}</tbody></table>"
                if etude["mesures"] else "<p>Aucune mesure enregistrée pour cette étude.</p>")
+
+    sources = ""
+    if etude["mesures"]:
+        joints = {m["joint"] for m in etude["mesures"]}
+        sources = "<p class='sources'>" + "<br>".join(
+            e(biomeca.SOURCES[j]) for j in biomeca.ARTICULATIONS if j in joints) + "</p>"
 
     recos = ""
     if etude["recommandations"]:
@@ -93,6 +101,7 @@ def construire(etude: dict, atelier: str) -> str:
 <dl class="cadre">{cadre}</dl>
 <p class="surtitre">Mesures{f' · {ecarts} hors fourchette' if etude['mesures'] else ''}</p>
 {mesures}
+{sources}
 {recos}
 <p class="mention">{e(c.MENTION)}</p>
 </main></body></html>"""
