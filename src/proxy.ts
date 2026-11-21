@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { clerkMiddleware } from '@clerk/nextjs/server';
 import type { NextRequest } from 'next/server';
 
 /**
@@ -23,11 +23,26 @@ function urlPublique(request: NextRequest): string {
 }
 
 /**
+ * Vrai si `chemin` est `prefixe` lui-meme ou une page en dessous.
+ *
+ * Remplace `createRouteMatcher`, deprecie par Clerk : ce filtre ne fait que
+ * renvoyer plus tot vers la connexion. L'autorite reste `requireUser()`,
+ * appele par chaque page, layout et server action protegee.
+ */
+function sous(prefixes: string[]) {
+  return (request: NextRequest) =>
+    prefixes.some(
+      (prefixe) =>
+        request.nextUrl.pathname === prefixe || request.nextUrl.pathname.startsWith(`${prefixe}/`)
+    );
+}
+
+/**
  * Seules ces routes sont protegees. Tout le reste (landing, pages d'auth,
  * assets) reste public : on protege une liste courte plutot que d'ouvrir des
  * exceptions une par une.
  */
-const routesProtegees = createRouteMatcher(['/dashboard(.*)', '/admin(.*)']);
+const routesProtegees = sous(['/dashboard', '/admin']);
 
 /**
  * Routes explicitement publiques, verifiees AVANT la liste protegee.
@@ -40,7 +55,7 @@ const routesProtegees = createRouteMatcher(['/dashboard(.*)', '/admin(.*)']);
  * facon ; on le declare quand meme pour qu'un futur elargissement de
  * `routesProtegees` ne casse pas la synchronisation en silence.
  */
-const routesPubliques = createRouteMatcher(['/api/webhooks(.*)']);
+const routesPubliques = sous(['/api/webhooks']);
 
 export default clerkMiddleware(
   async (auth, request) => {
