@@ -1,12 +1,22 @@
 """
-GUI — Interface graphique (customtkinter, style iOS).
+GUI — Interface graphique (customtkinter).
 
-Deux fenêtres :
-  - SetupWindow    : questionnaire → plages d'angles via l'API
-  - AnalysisWindow : webcam + squelette + feedback temps réel + bilan IA
+  - dashboard.app.DashboardApp : dashboard Axio (clients, études, séances)
+  - AnalysisWindow             : webcam + squelette + feedback temps réel
+  - SetupWindow                : ancien questionnaire (python main.py --rapide)
+
+Imports paresseux : AnalysisWindow charge mediapipe (plusieurs secondes),
+le dashboard ne le paie qu'à l'ouverture d'une séance.
 """
 
-from src.GUI.setup_window import SetupWindow
-from src.GUI.analysis_window import AnalysisWindow
-
 __all__ = ["SetupWindow", "AnalysisWindow"]
+
+
+def __getattr__(nom):
+    if nom == "SetupWindow":
+        from src.GUI.setup_window import SetupWindow
+        return SetupWindow
+    if nom == "AnalysisWindow":
+        from src.GUI.analysis_window import AnalysisWindow
+        return AnalysisWindow
+    raise AttributeError(nom)

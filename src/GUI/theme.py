@@ -24,8 +24,8 @@ BG = "#FAFAFA"            # fond général (zinc-50, jamais blanc pur)
 BG_DARK = "#18181B"       # panneau de marque (zinc-900, jamais noir pur)
 BG_DARK_2 = "#27272A"     # surfaces sur fond sombre (zinc-800)
 CARD = "#FFFFFF"          # cartes (seul blanc autorisé : élévation réelle)
-ACCENT = "#3572D6"        # bleu désaturé (~75 % de saturation)
-ACCENT_HOVER = "#2C5FB4"  # accent au survol
+ACCENT = "#E8332A"        # rouge Axio, accent unique (identique au web)
+ACCENT_HOVER = "#CF2721"  # accent au survol
 GREEN = "#2FA35C"         # dans la plage (émeraude désaturée)
 RED = "#D05353"           # hors plage (rouge désaturé)
 RED_HOVER = "#B84545"     # rouge au survol (bouton Terminer)
@@ -97,7 +97,7 @@ def init_fonts(root):
 # Le bouton primaire est SOMBRE (zinc-900), pas bleu : l'accent bleu reste
 # pour les détails (sélection, liens), les actions vivent en noir/blanc.
 # Forme pilule : rayon = moitié de la hauteur.
-BTN_DARK = "#18181B"        # action principale (zinc-900)
+BTN_DARK = "#0C0C0C"        # action principale (encre Axio)
 BTN_DARK_HOVER = "#2E2E33"  # survol : un cran plus clair, jamais plus sombre
 
 # Rayon commun des surfaces arrondies (cartes).
@@ -113,3 +113,30 @@ def to_bgr(hex_color: str) -> tuple:
     les couleurs du squelette suivent la palette sans duplication manuelle."""
     h = hex_color.lstrip("#")
     return (int(h[4:6], 16), int(h[2:4], 16), int(h[0:2], 16))
+
+
+# --- Jetons du dashboard Axio (tailwind.config.js de la version web) -------- #
+# Mêmes noms que côté web : un écran se lit pareil dans les deux versions.
+ENCRE = "#0C0C0C"
+ROUGE = "#E8332A"
+ROUGE_CTA = "#CF2721"
+ROUGE_CTA_HOVER = "#B31E19"
+ROUGE_TEXTE = "#C0241C"
+TEXTE = "#3A3A3A"
+TEXTE_DOUX = "#5A5A5A"
+GRIS = "#8A8A8A"
+GRIS_CLAIR = "#9A9A9A"
+LIGNE = "#E9E9E9"
+LIGNE_DOUCE = "#EDEDED"
+FOND_DOUX = "#F6F6F5"
+BLANC = "#FFFFFF"
+RAYON_BLOC = 24
+
+
+def font(taille: int, graisse: str = "normal", role: str = "texte"):
+    """Police du dashboard : rôle « texte », « titre » ou « mono »."""
+    # Segoe UI « statique » pour le texte : la variante Variable sort trop
+    # maigre en regular et trop serrée en gras sous Tk.
+    texte = "Segoe UI" if FAMILY.startswith("Segoe UI Variable") else FAMILY
+    famille = {"texte": texte, "titre": DISPLAY, "mono": MONO}[role]
+    return (famille, taille, graisse)

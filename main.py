@@ -1,13 +1,13 @@
 """
-main.py — Point d'entrée de l'application BikeFit.
+main.py — Point d'entrée du logiciel de bureau Axio.
 
-Enchaînement :
-  1. SetupWindow : le cycliste remplit le questionnaire ;
-  2. l'API calcule les plages d'angles cibles (repli hors ligne géré) ;
-  3. AnalysisWindow : analyse webcam temps réel + bilan IA de fin de session ;
-  4. retour au questionnaire pour une nouvelle session éventuelle.
+Ouvre le dashboard (copie de la version web, données locales SQLite) :
+clients, études, séance de capture webcam, comptes rendus imprimables.
 
-Lancer depuis la racine du projet :  python main.py
+    python main.py            dashboard Axio
+    python main.py --rapide   ancien parcours questionnaire → analyse
+
+Lancer depuis la racine du projet.
 """
 
 # Couper les logs bavards de TensorFlow AVANT tout import mediapipe.
@@ -18,8 +18,8 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 import sys
 
 import customtkinter as ctk
+from dotenv import load_dotenv
 
-from src.GUI import SetupWindow, AnalysisWindow
 
 
 def resource_path(relative: str) -> str:
@@ -43,11 +43,12 @@ def resource_path(relative: str) -> str:
 MODEL_PATH = resource_path(os.path.join("config", "pose_landmarker.task"))
 
 
-def main():
-    ctk.set_appearance_mode("light")     # design system pensé en thème clair
+def main_rapide():
+    """Ancien parcours sans fiche : questionnaire puis analyse."""
+    from src.GUI import SetupWindow, AnalysisWindow
+    ctk.set_appearance_mode("light")
 
     def launch_analysis(profile: dict, ranges: dict, advice: dict):
-        # Le questionnaire s'efface pendant l'analyse et revient à la fin.
         app.withdraw()
         AnalysisWindow(
             app,
@@ -56,11 +57,20 @@ def main():
             comment=profile["comment"],
             model_path=MODEL_PATH,
             on_close=app.deiconify,
+            title="Axio — Analyse rapide",
         )
 
     app = SetupWindow(on_profile_ready=launch_analysis)
     app.mainloop()
 
 
+def main():
+    ctk.set_appearance_mode("light")     # design system pensé en thème clair
+    load_dotenv(resource_path(".env"))
+    load_dotenv()
+    from src.GUI.dashboard.app import DashboardApp
+    DashboardApp(model_path=MODEL_PATH).mainloop()
+
+
 if __name__ == "__main__":
-    main()
+    main_rapide() if "--rapide" in sys.argv else main()

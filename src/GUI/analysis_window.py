@@ -111,8 +111,16 @@ class AnalysisWindow(ctk.CTkToplevel):
     """Fenêtre d'analyse : vidéo à gauche, feedback temps réel à droite."""
 
     def __init__(self, master, ranges: dict, comment: str,
-                 model_path: str, advice: dict = None, on_close=None):
+                 model_path: str, advice: dict = None, on_close=None,
+                 on_finished=None, title: str = "Axio — Séance",
+                 note: str = None):
+        """on_finished(valeurs) : mode dashboard. « Terminer » remet les
+        angles jugés ({"knee": 147.3 | None, ...}) à l'appelant, qui les
+        enregistre, au lieu d'afficher le bilan IA dans la fenêtre.
+        note : ligne d'état sous « Articulations » (source des fourchettes)."""
         super().__init__(master, fg_color=theme.BG)
+        self._on_finished = on_finished
+        self._note = note
         self._ranges = ranges
         # Conseils de réglage vélo personnalisés par l'IA au setup
         # (repli : diagnostics standard dans analyse_session).
@@ -134,7 +142,7 @@ class AnalysisWindow(ctk.CTkToplevel):
         # Taille d'affichage vidéo, mise en cache (winfo_* coûte cher à 60 fps).
         self._view_size = (640, 480)
 
-        self.title("BikeFit — Analyse")
+        self.title(title)
         self.geometry("1180x660")
         self.minsize(960, 560)
         # Fermer par la croix en pleine session ne jette JAMAIS les mesures :
@@ -199,9 +207,12 @@ class AnalysisWindow(ctk.CTkToplevel):
                      anchor="w").pack(fill="x", padx=14, pady=(10, 0))
         # État honnête : si l'IA n'a pas répondu, les plages affichées sont
         # les valeurs standard — l'opérateur doit le savoir.
-        if self._ranges is DEFAULT_RANGES:
+        note = self._note
+        if note is None and self._ranges is DEFAULT_RANGES:
+            note = "Plages standard — personnalisation IA indisponible."
+        if note:
             ctk.CTkLabel(stats_card,
-                         text="Plages standard — personnalisation IA indisponible.",
+                         text=note, wraplength=300, justify="left",
                          font=theme.FONT_SMALL, text_color=theme.TEXT_2,
                          anchor="w").pack(fill="x", padx=14, pady=(2, 0))
         self._rows = {}
@@ -249,10 +260,10 @@ class AnalysisWindow(ctk.CTkToplevel):
         self._video_label.configure(
             text="Impossible d'ouvrir la webcam.\n\n"
                  "Branche ou autorise une caméra,\n"
-                 "puis relance l'analyse depuis le questionnaire.",
+                 "puis relance la séance.",
             font=theme.FONT_BODY, justify="center")
         self._advice.configure(text="Analyse impossible sans caméra.")
-        self._finish_btn.configure(text="Retour au questionnaire",
+        self._finish_btn.configure(text="Retour",
                                    fg_color=theme.BTN_DARK,
                                    hover_color=theme.BTN_DARK_HOVER,
                                    command=self._close)
@@ -466,7 +477,7 @@ class AnalysisWindow(ctk.CTkToplevel):
         # regarde surtout la vidéo — ce signal ramène l'œil au bon moment.
         if text != self._advice.cget("text"):
             self._advice.configure(text=text)
-            flash(self._advice_card, "fg_color", "#E3EDFB", theme.CARD)
+            flash(self._advice_card, "fg_color", "#FDECEA", theme.CARD)
 
     # ------------------------------------------------------------------ #
     # Fin de session : bilan IA
@@ -483,6 +494,12 @@ class AnalysisWindow(ctk.CTkToplevel):
         if not self._running:
             return
         self._running = False
+        if self._on_finished is not None:
+            valeurs = {j: self._session.judged_value(j) for j in JOINT_ANGLES}
+            self._release_camera()
+            self.destroy()
+            self._on_finished(valeurs)
+            return
         findings = analyse_session(self._session, self._ranges,
                                    self._advice_map)
         self._release_camera()
