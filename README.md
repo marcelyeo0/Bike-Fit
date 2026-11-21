@@ -5,8 +5,17 @@ site vitrine et le dashboard de l'atelier : **Next.js 16 (App Router)**,
 authentification **Clerk**, données **Prisma 7** sur **PostgreSQL 16**, le tout
 lançable sous **Docker**.
 
-Branches : `web` porte le site et le début du dashboard, `web_docker` ajoute
-Docker et le dashboard complet. L'ancien prototype Python reste sur `main`.
+Branches :
+
+| Branche | Contenu |
+| --- | --- |
+| `web_docker` | cette version web : site, dashboard complet, Docker |
+| `feature/dashboard-bureau` | logiciel de bureau Windows : ce dashboard reproduit en Python, données locales SQLite, séance webcam (voir plus bas) |
+| `main` | prototype Python d'origine, base de la version bureau |
+| tags `archive/feature-exe`, `archive/feature-frontend` | anciennes branches archivées |
+
+L'ancienne branche `web` est entièrement contenue dans `web_docker` et a été
+supprimée.
 
 ## Lancer
 
@@ -250,6 +259,21 @@ superposé), les retours texte à droite.
 ```bash
 npm run biomeca:verify   # angles, fourchettes, cadre, consignes : sans base ni caméra
 ```
+
+## Version bureau
+
+`feature/dashboard-bureau` reproduit ce dashboard en application Windows hors
+ligne (customtkinter), pour les démonstrations en atelier sans réseau ni
+compte : `python main.py` ou `Axio.bat`. Mêmes écrans, textes, palette et
+règles biomécaniques (portage de `src/lib/biomeca/`), base SQLite locale, séance
+webcam MediaPipe, compte rendu A4. Détails dans le README de cette branche.
+
+Différence volontaire : **les fourchettes y sont déterministes**, sans appel
+Gemini. Même profil, même cible, source affichée sur chaque étude. Raisons :
+reproductibilité devant un fitter, explicabilité, démo sans réseau, et la
+réponse du modèle était déjà bornée à ±15° de la table locale. Un modèle de
+langage n'y servirait qu'à rédiger un bilan, pas à fixer les nombres. À
+aligner ici : `src/lib/requetes/plages.ts` appelle encore Gemini.
 
 ## Dashboard : règles de sécurité
 
