@@ -157,9 +157,8 @@ export default async function EtudePage({
         </p>
       )}
 
-      <dl className="m-0 mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 print:mt-6 print:grid-cols-4">
+      <dl className="m-0 mt-8 grid gap-4 sm:grid-cols-3 print:mt-6 print:grid-cols-3">
         {[
-          { terme: 'Référence client', valeur: etude.client?.code ?? '—' },
           {
             terme: 'Pratique',
             valeur: etude.pratique ? LIBELLES_PRATIQUE[etude.pratique] : 'Non renseignée',

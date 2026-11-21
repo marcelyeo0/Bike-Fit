@@ -153,7 +153,6 @@ export async function calculerPlagesSeance(profil: Profil): Promise<PlagesSeance
 
 export type ContexteSeance = {
   etudeId: string;
-  codeClient: string | null;
   pratique: Pratique | null;
   objectif: Objectif | null;
   tailleCm: number | null;
@@ -183,7 +182,7 @@ export async function ouvrirSeance(
       pratique: true,
       objectif: true,
       plagesSeance: true,
-      client: { select: { code: true, tailleCm: true, entrejambeCm: true } },
+      client: { select: { tailleCm: true, entrejambeCm: true } },
     },
   });
   if (!etude) return null;
@@ -208,7 +207,6 @@ export async function ouvrirSeance(
 
   return {
     etudeId: etude.id,
-    codeClient: etude.client?.code ?? null,
     pratique: etude.pratique,
     objectif: etude.objectif,
     tailleCm,

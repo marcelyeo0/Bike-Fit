@@ -11,7 +11,9 @@ import {
   LIBELLES_PRATIQUE,
   OBJECTIFS,
   PRATIQUES,
+  formaterDate,
 } from '../../../../../lib/libelles';
+import BoutonEnvoi from '../../../_composants/BoutonEnvoi';
 import ChampsClient from '../../../_composants/ChampsClient';
 import {
   BLOC,
@@ -83,6 +85,11 @@ export default async function NouvelleEtudePage({
     searchParams,
   ]);
 
+  // Deux fiches au meme nom ne se distinguent que par leur date de creation.
+  const vus = new Set<string>();
+  const homonymes = new Set<string>();
+  for (const { nom } of clients) (vus.has(nom) ? homonymes : vus).add(nom);
+
   if (!autorisation.autorise) {
     const message = estRefus(autorisation.motif)
       ? MESSAGES_REFUS[autorisation.motif]
@@ -150,10 +157,13 @@ export default async function NouvelleEtudePage({
             )}
 
             <div className="mt-7 flex flex-wrap items-center gap-4">
-              <button type="submit" className={BOUTON_PRIMAIRE}>
-                <Plus size={18} weight="bold" />
+              <BoutonEnvoi
+                className={BOUTON_PRIMAIRE}
+                enCours="Création…"
+                icone={<Plus size={18} weight="bold" />}
+              >
                 Créer le client et continuer
-              </button>
+              </BoutonEnvoi>
               <Link href="/dashboard" className={LIEN_DISCRET}>
                 Annuler
               </Link>
@@ -183,7 +193,8 @@ export default async function NouvelleEtudePage({
             </option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>
-                {client.nom} ({client.code})
+                {client.nom}
+                {homonymes.has(client.nom) ? ` · créé le ${formaterDate(client.createdAt)}` : ''}
               </option>
             ))}
           </select>
@@ -211,9 +222,9 @@ export default async function NouvelleEtudePage({
           )}
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
-            <button type="submit" className={BOUTON_PRIMAIRE}>
+            <BoutonEnvoi className={BOUTON_PRIMAIRE} enCours="Ouverture…">
               Ouvrir l’étude
-            </button>
+            </BoutonEnvoi>
 
             <Link href="/dashboard" className={LIEN_DISCRET}>
               Annuler

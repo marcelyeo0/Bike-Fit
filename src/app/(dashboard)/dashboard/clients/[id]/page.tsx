@@ -9,6 +9,7 @@ import { lireFicheClient } from '../../../../../lib/requetes/clients';
 import { formaterCm, formaterDate } from '../../../../../lib/libelles';
 import CarteEtude from '../../_composants/CarteEtude';
 import BoutonSuppression from '../../../_composants/BoutonSuppression';
+import BoutonEnvoi from '../../../_composants/BoutonEnvoi';
 import ChampsClient from '../../../_composants/ChampsClient';
 import {
   BLOC,
@@ -61,7 +62,6 @@ export default async function FicheClientPage({
           <h1 className="m-0 mt-2 font-display text-titre-sm text-encre">{client.nom}</h1>
           <p className="m-0 mt-3 text-[15.5px] leading-[1.6] text-texte-doux">
             Créé le {formaterDate(client.createdAt)}
-            <span className="ml-2 font-mono text-[13px] text-gris">{client.code}</span>
           </p>
         </div>
 
@@ -109,9 +109,9 @@ export default async function FicheClientPage({
             </p>
           )}
 
-          <button type="submit" className={`${BOUTON_CONTOUR} mt-6`}>
+          <BoutonEnvoi className={`${BOUTON_CONTOUR} mt-6`} enCours="Enregistrement…">
             Enregistrer la fiche
-          </button>
+          </BoutonEnvoi>
         </form>
       </section>
 

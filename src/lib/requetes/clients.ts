@@ -67,11 +67,11 @@ export async function lireCarnet(userId: string): Promise<ClientDuCarnet[]> {
 /** Les clients de CET atelier par ordre alphabetique, pour le selecteur du formulaire d'etude. */
 export async function lireClientsSelecteur(
   userId: string
-): Promise<{ id: string; code: string; nom: string }[]> {
+): Promise<{ id: string; nom: string; createdAt: Date }[]> {
   return db.client.findMany({
     where: { userId },
     orderBy: [{ nom: 'asc' }, { createdAt: 'desc' }],
-    select: { id: true, code: true, nom: true },
+    select: { id: true, nom: true, createdAt: true },
   });
 }
 

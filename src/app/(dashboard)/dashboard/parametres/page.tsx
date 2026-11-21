@@ -100,9 +100,9 @@ export default async function ParametresPage() {
           Données de l’atelier
         </h2>
         <p className="m-0 mt-2 max-w-[680px] text-[14px] leading-[1.6] text-texte-doux">
-          L’export complet réunit tous vos clients (leurs codes et mensurations), leurs études,
-          les mesures et les recommandations dans un fichier JSON. Axio ne conserve aucune vidéo
-          et aucun nom de cycliste : il n’y en a donc pas dans l’export.
+          L’export complet réunit tous vos clients (leur nom et leurs mensurations), leurs
+          études, les mesures et les recommandations dans un fichier JSON. Axio ne conserve
+          aucune vidéo : il n’y en a donc pas dans l’export.
         </p>
 
         {/* Route handler : `<a download>`, pas `<Link>`. */}

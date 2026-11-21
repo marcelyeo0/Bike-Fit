@@ -5,6 +5,7 @@ import { Plus } from '@phosphor-icons/react/dist/ssr';
 import { requireUser } from '../../../../lib/auth';
 import { lireCarnet } from '../../../../lib/requetes/clients';
 import { formaterCm, formaterDate } from '../../../../lib/libelles';
+import BoutonEnvoi from '../../_composants/BoutonEnvoi';
 import ChampsClient from '../../_composants/ChampsClient';
 import EtatVide from '../../_composants/EtatVide';
 import {
@@ -77,10 +78,13 @@ export default async function ClientsPage({
             </p>
           )}
 
-          <button type="submit" className={`${BOUTON_PRIMAIRE} mt-6`}>
-            <Plus size={18} weight="bold" />
+          <BoutonEnvoi
+            className={`${BOUTON_PRIMAIRE} mt-6`}
+            enCours="Création…"
+            icone={<Plus size={18} weight="bold" />}
+          >
             Créer le client
-          </button>
+          </BoutonEnvoi>
         </form>
       </section>
 
@@ -129,9 +133,6 @@ export default async function ClientsPage({
                         >
                           {client.nom}
                         </Link>
-                        <span className="ml-2 font-mono text-[12px] font-normal text-gris">
-                          {client.code}
-                        </span>
                       </th>
                       <td className="px-6 py-4 font-mono tabular-nums text-texte">{formaterCm(client.tailleCm)}</td>
                       <td className="px-6 py-4 font-mono tabular-nums text-texte">{formaterCm(client.entrejambeCm)}</td>
